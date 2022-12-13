@@ -2,43 +2,44 @@ package main
 
 import (
 	"context"
+	"reflect"
+	"sync"
 )
 
 type MyContext struct {
-	cur   context.Context
-	child []context.Context
+	c context.Context
+	m *sync.Map
 }
 
-func NewMyContext(k, v any) *MyContext {
+func NewMyContext() *MyContext {
 	return &MyContext{
-		cur: context.WithValue(context.Background(), k, v),
+		c: context.Background(),
+		m: &sync.Map{},
 	}
 }
 
-func WithValue(parent *MyContext, key, val interface{}) *MyContext {
-	nmc := &MyContext{
-		cur: context.WithValue(parent.cur, key, val),
+func WithValue(parent *MyContext, key, val any) *MyContext {
+	if parent == nil {
+		panic("cannot create context from nil parent")
 	}
-	parent.child = append(parent.child, nmc.cur)
-	return nmc
+	if key == nil {
+		panic("nil key")
+	}
+	if !reflect.TypeOf(key).Comparable() {
+		panic("key is not comparable")
+	}
+	parent.m.Store(key, val)
+	return &MyContext{c: context.WithValue(parent.c, key, val), m: parent.m}
 }
 
-func (m *MyContext) Value(key any) any {
-	res := m.cur.Value(key)
-	if res == nil {
-		for _, child := range m.child {
-			v := child.Value(key)
-			if v != nil {
-				return v
-			}
-		}
-	}
-	return res
+func (mc *MyContext) Value(key any) any {
+	val, _ := mc.m.Load(key)
+	return val
 
 }
 
 func main() {
-	c := NewMyContext(1, 1)
+	c := NewMyContext()
 	c1 := WithValue(c, 2, 2)
 	c2 := WithValue(c1, 3, 2)
 	c3 := WithValue(c2, 4, 2)

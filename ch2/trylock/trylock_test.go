@@ -37,3 +37,28 @@ func TestMyTryLock(t *testing.T) {
 	timer := time.After(10 * time.Second)
 	<-timer
 }
+
+func TestTryLockAfterTime(t *testing.T) {
+	lk := NewMyLock()
+	c := time.After(20 * time.Second)
+	go func() {
+		lk.Lock()
+		time.Sleep(10 * time.Second)
+		lk.UnLock()
+	}()
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		for {
+			flag := lk.TryLockAfterTime(3 * time.Second)
+			if flag {
+				println("lock success")
+				lk.UnLock()
+				break
+			} else {
+				println("lock fail,wait !!!")
+			}
+		}
+	}()
+	<-c
+}

@@ -10,19 +10,17 @@ type MyMap struct {
 }
 
 func (m *MyMap) finishJob(t task, id int) {
-	// m.mux.Lock()
-	// defer m.mux.Unlock()
-
+	m.mux.Lock()
 	// finish task
 	delete(m.m, id)
+	m.mux.Unlock()
+
 }
 
 func (m *MyMap) DoMyJob(taskID int) {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-
+	m.mux.RLock()
 	t := m.m[taskID]
-
+	m.mux.RUnlock()
 	m.finishJob(t, taskID)
 }
 

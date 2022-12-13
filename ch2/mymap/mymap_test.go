@@ -6,9 +6,16 @@ import (
 )
 
 func BenchmarkMyMap(b *testing.B) {
+	m := NewMyMap()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			m := NewMyMap()
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
 			m.Store("kkk", 123)
 			m.Load("test")
 			m.LoadOrStore("fff", 333)
@@ -18,9 +25,16 @@ func BenchmarkMyMap(b *testing.B) {
 }
 
 func BenchmarkSyncMap(b *testing.B) {
+	var m sync.Map
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			var m sync.Map
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
+			m.Store("kkk", 123)
 			m.Store("kkk", 123)
 			m.Load("test")
 			m.LoadOrStore("fff", 333)

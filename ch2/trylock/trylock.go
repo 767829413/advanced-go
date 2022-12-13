@@ -1,5 +1,7 @@
 package trylock
 
+import "time"
+
 type MyLock struct {
 	flag chan struct{}
 }
@@ -28,5 +30,17 @@ func (m *MyLock) TryLock() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (m *MyLock) TryLockAfterTime(t time.Duration) bool {
+	at := time.After(t)
+	for {
+		select {
+		case <-m.flag:
+			return true
+		case <-at:
+			return false
+		}
 	}
 }

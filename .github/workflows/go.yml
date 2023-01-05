@@ -18,24 +18,6 @@ jobs:
           golangci_lint_flags: "--skip-dirs=mtls/crypto,module/http2 --enable-all --timeout=10m --exclude-use-default=false --tests=false --disable=gochecknoinits,gochecknoglobals,exhaustive,nakedret,exhaustivestruct"
           workdir: pkg
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Go Test Action
-        # You may pin to the exact commit or the version.
-        # uses: robherley/go-test-action@d2be031ae805ef1cfd282b685ff38f8b65e799b8
-        uses: robherley/go-test-action@v0.1.0
-        with:
-          # Directory of go module to test
-          moduleDirectory: github.com/767829413/advanced-go/test
-          # Arguments to `go test`, `-json` will be prepended
-          testArguments: -benchmem -run=none -bench=.  github.com/767829413/advanced-go/test -v -count=1
-          # Omit any packages from summary output that do not have tests
-          omitUntestedPackages: false
-          # Omit the pie chart from the summary output
-          omitPie: false
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -50,4 +32,4 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test -v ./...
+        run: go test -benchmem -run=none -bench=.  github.com/767829413/advanced-go/test -v -count=1

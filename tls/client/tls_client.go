@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 
@@ -41,7 +41,7 @@ func main() {
 				fmt.Println(e)
 			} else {
 				defer resp.Body.Close()
-				ioutil.ReadAll(resp.Body)
+				io.ReadAll(resp.Body)
 			}
 		}()
 	}

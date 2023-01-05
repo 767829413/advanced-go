@@ -31,5 +31,5 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Test
+      - name: Benchmark-Test
         run: go test -benchmem -run=none -bench=.  github.com/767829413/advanced-go/test -v -count=1

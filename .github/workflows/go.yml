@@ -25,13 +25,13 @@ jobs:
       uses: robherley/go-test-action@v0.1.0
       with:
         # Directory of go module to test
-        moduleDirectory: # optional, default is .
+        moduleDirectory: ./test
         # Arguments to `go test`, `-json` will be prepended
-        testArguments: # optional, default is ./...
+        testArguments: -benchmem -run=none -bench=.  github.com/767829413/advanced-go/test -v -count=1
         # Omit any packages from summary output that do not have tests
-        omitUntestedPackages: # optional, default is false
+        omitUntestedPackages: false
         # Omit the pie chart from the summary output
-        omitPie: # optional, default is false
+        omitPie: false
 
   build:
     runs-on: ubuntu-latest

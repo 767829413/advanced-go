@@ -22,8 +22,7 @@ func main() {
 
 	for i := 0; ; i++ {
 		bucket.Take()
-		i := i
-		go func() {
+		go func(i int) {
 			l.Lock()
 			if connList[i%len(connList)] == nil {
 				connList[i%len(connList)] = &http.Client{
@@ -43,6 +42,6 @@ func main() {
 				defer resp.Body.Close()
 				io.ReadAll(resp.Body)
 			}
-		}()
+		}(i)
 	}
 }

@@ -1,25 +1,25 @@
 package main
 
-import "time"
+import "sync"
 
-func main() {
-	var ch = make(chan int)
+var slicePool = sync.Pool{}
+var mapPool = sync.Pool{}
 
-	go func() {
-		i := 0
-		for {
-			ch <- i
-			i++
-		}
+// slice can be easily reused
+func processUserRequest1() {
+	sl := slicePool.Get().([]any)
+	defer func() {
+		sl := sl[:0]
+		slicePool.Put(sl)
 	}()
+	// processs user logic
+}
 
-	go func() {
-		for {
-			println(<-ch)
-		}
+// what about map?
+func processUserRequest2() {
+	m := mapPool.Get()
+	defer func() {
+		// how to reset a map
+		mapPool.Put(m)
 	}()
-
-	af := time.After(1000 * time.Microsecond)
-
-	<-af
 }

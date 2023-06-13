@@ -541,6 +541,7 @@ retry:
 * <https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html>
 * <https://docs.google.com/document/d/1wmjrocXIWTr1JxU-3EQBI6BK6KgtiFArkG47XK73xIQ/edit#>
 * <https://zhuanlan.zhihu.com/p/95056679>
+* <https://github.com/golang-design/under-the-hood>
 
 ## 未涉及
 

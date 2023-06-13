@@ -1,5 +1,10 @@
 package main
 
 func main() {
-	println("hello")
+	allocOnHeap()
+}
+
+func allocOnHeap() {
+	var m = make([]int, 10240)
+	println(m)
 }

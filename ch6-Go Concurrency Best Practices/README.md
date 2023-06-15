@@ -744,6 +744,51 @@ func main() {
 
  *⽆ buffer 的 chan receive 先于 send 执⾏完，这⾥也可以保证打印出 hi*
 
+* 锁与通道最好不要同时使用,容易产生隐性死锁
+
+```go
+var rw sync.RWMutex
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	ch := make(chan int)
+
+	for i := 0; i < 5; i++ {
+		go readGo(ch, i)
+	}
+
+	for i := 0; i < 5; i++ {
+		go writeGo(ch, i)
+	}
+
+	<-time.After(20 * time.Second)
+	close(ch)
+}
+
+func readGo(in <-chan int, idx int) {
+	for {
+		// rw.RLock()
+		num := <-in
+		fmt.Printf("-------第%d read goroutine 读到数字 %d\n", idx, num)
+		// rw.RUnlock()
+	}
+}
+
+func writeGo(out chan<- int, idx int) {
+	for {
+		num := rand.Intn(1000)
+		rw.Lock()
+		out <- num
+		fmt.Printf("-------第%d write goroutine 读到数字 %d\n", idx, num)
+		time.Sleep(time.Millisecond * 300)
+		rw.Unlock()
+	}
+}
+```
+ 
+ *readGo 持有读锁,同时阻塞在<-in,writeGo 会堵塞在 rw.Lock() 从而导致 readGo 循环阻塞*
+
  **Lock && Unlock：**
 
 * For any sync.Mutex or sync.RWMutex variable l and n < m, call n of l.Unlock() happens before call m of l.Lock() returns.

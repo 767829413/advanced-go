@@ -1,10 +1,15 @@
 package main
 
-func main() {
-	allocOnHeap()
+var c = make(chan int)
+var a string
+
+func f() {
+	a = "hi"
+	<-c
 }
 
-func allocOnHeap() {
-	var m = make([]int, 10240)
-	println(m)
+func main() {
+	go f()
+	c <- 0
+	println(a)
 }

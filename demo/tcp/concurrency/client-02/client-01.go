@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:9898")
+	conn, err := net.Dial("tcp", "wsl:9898")
 	exit := make(chan struct{})
 	if err != nil {
 		fmt.Println("net.Dial error: ", err)

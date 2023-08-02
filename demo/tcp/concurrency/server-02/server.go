@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	l, err := net.Listen("tcp", "localhost:9898")
+	l, err := net.Listen("tcp", "wsl:9898")
 	if err != nil {
 		fmt.Println("net.Listen err: ", err)
 		return
@@ -15,7 +15,7 @@ func main() {
 	defer l.Close()
 	fmt.Println("start wait data")
 	for {
-		conn, err := l.Accept()
+		conn, err := l.Accept() // LISTEN 状态
 		if err != nil {
 			fmt.Println("l.Accept() err: ", err)
 		}

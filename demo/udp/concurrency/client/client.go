@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/767829413/advanced-go/util"
 )
 
 func main() {
-	conn, err := net.Dial("udp", "wsl:9899")
+	conn, err := net.Dial("udp", "localhost:9899")
 	if err != nil {
 		fmt.Println("net.Dial error: ", err)
 		return
@@ -17,10 +19,10 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			time.Sleep(time.Second)
+			time.Sleep(1 * time.Second)
 		default:
 			fmt.Println("start request server")
-			_, err = conn.Write([]byte("hello world"))
+			_, err = conn.Write([]byte(util.RandStr(5)))
 			if err != nil {
 				fmt.Println("conn.Write failed: ", err)
 				return

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// 组织一个 udp 地址结构,指定服务器的 ip:port
-	udpServerAddr, err := net.ResolveUDPAddr("udp", "wsl:9899")
+	udpServerAddr, err := net.ResolveUDPAddr("udp", "localhost:9899")
 	if err != nil {
 		fmt.Println("net.ResolveUDPAddr err: ", err)
 	}

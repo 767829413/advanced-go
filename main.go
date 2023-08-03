@@ -10,7 +10,6 @@ import (
 var rw sync.RWMutex
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 
 	ch := make(chan int)
 

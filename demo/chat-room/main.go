@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net"
+	"strings"
+	"time"
 
 	"github.com/767829413/advanced-go/util"
 )
@@ -75,16 +79,31 @@ func handlerConn(conn net.Conn) {
 	// 启动一个 goroutine 来读取消息
 	go readUserMsg(conn, &user)
 
-	// 获取用户输入的信息
-	buf := make([]byte, 4096)
+	var exit = make(chan struct{})
+	var lively = make(chan struct{})
+
+	// 启动一个 goroutine 来读取客户端输入的信息
+	go writeUserMsg(conn, &user, exit, lively)
+
+	exitFunc := func(s string) {
+		delete(clients, util.Str2HashInt(user.Addr))
+		exitMsg := "[" + user.Addr + "]" + user.Name + " " + s
+		log.Println(exitMsg)
+		msg <- exitMsg
+	}
+
 	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			log.Println("conn.Read error: ", err)
+		select {
+		case <-exit:
+			exitFunc("exit")
+			return
+		case <-lively:
+		case <-time.After(10 * time.Second):
+			exitFunc("timeout exit")
 			return
 		}
-		user.C <- user.Name + ": " + string(buf[:n])
 	}
+
 }
 
 func readUserMsg(conn net.Conn, user *user) {
@@ -94,7 +113,45 @@ func readUserMsg(conn net.Conn, user *user) {
 		_, err := conn.Write([]byte(message + "\n"))
 		if err != nil {
 			log.Println("conn.Write error: ", err)
+			continue
+		}
+	}
+}
+
+func writeUserMsg(conn net.Conn, user *user, exit, lively chan<- struct{}) {
+	// 获取用户输入的信息
+	buf := make([]byte, 4096)
+	for {
+		n, err := conn.Read(buf)
+		if n == 0 || err == io.EOF {
+			exit <- struct{}{}
 			return
 		}
+		if err != nil {
+			log.Println("conn.Read error: ", err)
+			continue
+		}
+		message := strings.TrimSpace(string(buf[:n]))
+		lively <- struct{}{}
+		// 根据用户的输出来执行操作
+		// 展示在线用户列表
+		if message == "who" {
+			conn.Write([]byte("online user list:\n"))
+			// 遍历 map 返回用户列表
+			for _, user := range clients {
+				conn.Write([]byte("[" + user.Addr + "]" + user.Name + "\n"))
+			}
+			conn.Write([]byte(fmt.Sprintf("online user totals: %d\n", len(clients))))
+			continue
+		} else if strings.Contains(message, "rename|") {
+			strArr := strings.Split(message, "|")
+			if strArr[0] != "rename" || len(strArr) != 2 {
+				conn.Write([]byte("Please enter rename|the name you set" + "\n"))
+			} else {
+				clients[util.Str2HashInt(user.Addr)].Name = strArr[1]
+			}
+			continue
+		}
+		msg <- "[" + user.Addr + "]" + user.Name + ": " + message
 	}
 }

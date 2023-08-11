@@ -95,5 +95,4 @@ func send(conn net.Conn, path string) {
 			return
 		}
 	}
-
 }

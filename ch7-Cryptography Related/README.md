@@ -110,16 +110,227 @@
 		* 两个标志位进行按位异或
 			* 相同为0,不同为1
 	* ECB- Electronic Code Book,电子密码本模式
+		* 特点: 简单,高效,密文有规律,易破解
+		* 最后一个明文分组必须填充
+			* des/3des: 最后一个分组填充满 8byte
+			* aes: 最后一个分组填充满 16byte
+		* 不需要初始化向量
 	* CBC- Cipher Block Chaining,密码块链模式
-
-	```go
-	
-	```
-
+		* 特点: 密文无规律,使用率高
+		* 最后一个明文分组必须填充
+			* des/3des: 最后一个分组填充满 8byte
+			* aes: 最后一个分组填充满 16byte
+		* 需要初始化向量(数组)
+			* 数组长度: 明文分组长度相同
+			* 数据来源: 负责加密方提供(随机字符串)
+			* 解密和加密的初始化向量必须相同
 	* CFB- Cipher FeedBack,密文反馈模式
+		* 特点: 密文无规律,明文分组是和一个数据流进行按位异或操作后最终生成密文
+		* 最后一个明文分组不必填充
+		* 需要初始化向量(数组)
+			* 数组长度: 明文分组长度相同
+			* 数据来源: 负责加密方提供(随机字符串)
+			* 解密和加密的初始化向量必须相同
 	* OFB - Output-Feedback,输出反馈模式
+		* 特点: 密文无规律,明文分组是和一个数据流进行按位异或操作后最终生成密文
+		* 最后一个明文分组不必填充
+		* 需要初始化向量(数组)
+			* 数组长度: 明文分组长度相同
+			* 数据来源: 负责加密方提供(随机字符串)
+			* 解密和加密的初始化向量必须相同
 	* CTR-CounTeR,计数器模式
+		* 特点: 密文无规律,明文分组是和一个数据流进行按位异或操作后最终生成密文
+		* 最后一个明文分组不必填充
+		* 不需要初始化向量
+			* go接口中的IV可以理解为随机数种子,长度是明文分组长度
 	* 最后一个明文分组的填充
+		* 使用CBC,ECB分组模式需要填充
+			* 要求: 
+				* 明文分组中进行填充,然后加密
+				* 解密密文得到明文,需要删除填充字节
+				* 小技巧,填充的字节最好就是填充的长度值,如果明文分组不需要填充,那么也填充一个分组,方便删除
+		* 使用OFB,CFB,CTR不需要填充
 	* 初始化向量-IV
+		* ECB,CTR分组模式不需要初始化向量
+		* CBC,OFC,CFB需要初始化向量
+			* 初始化向量长度
+				* DES/3DES: 8byte
+				* AES: 16byte
+			* 加密解密的初始化向量是一致的
+
+5. 对称加密在go中的实现
+
+	* 加密流程
+		1. 创建一个底层使用的 DES/3DES/AES的密码接口
+			* [DES/3DES](https://pkg.go.dev/crypto/des@go1.21.0)
+			* [AES](https://pkg.go.dev/crypto/aes@go1.21.0)
+		2. 根据分组模式进行分组填充(比如CBC,ECB需要填充)
+		3. 创建一个密码分组模式的接口对象
+			* [CBC|CFB|OFB|CTR](https://pkg.go.dev/crypto/cipher@go1.21.0#Block)
+		4. 加密得到密文
+
+```go
+package main
+
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/des"
+	"fmt"
+)
+
+/*
+DES的CBC加密
+1. 编写填充函数,如果最后一个分组字节数不够,填充
+2. 字节数合适的便添加新分组
+3. 填充的字节值 == 减少的字节值
+*/
+
+func paddingLastGroup(plainText []byte, blockSize int) []byte {
+	// 计算最后一组中剩余字节数,通过取余获取,恰好就填充整个一组
+	padNum := blockSize - len(plainText)%blockSize
+	// 创建新的byte切片,长度为panNum,每个字节值为byte(padNum)
+	char := []byte{byte(padNum)}
+	// 新的切片初始化
+	char = bytes.Repeat(char, padNum)
+	plainText = append(plainText, char...)
+	return plainText
+}
+
+func unpaddingLastGroup(plainText []byte) []byte {
+	// 获取最后一位获取填充长度
+	l := int(plainText[len(plainText)-1])
+	return plainText[:len(plainText)-l]
+}
+
+// des加密,分组方法CBC,key长度是8
+func desEnCrypt(plainText, key []byte) ([]byte, error) {
+	// 创建一个底层使用的 DES 的密码接口
+	block, err := des.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	// 根据分组模式进行分组填充(比如CBC,ECB需要填充)
+	plainText = paddingLastGroup(plainText, block.BlockSize())
+	// 创建一个密码分组模式的接口对象,这里是CBC
+	iv := []byte("12345678")
+	blockMode := cipher.NewCBCEncrypter(block, iv)
+	dst := make([]byte, len(plainText))
+	blockMode.CryptBlocks(dst, plainText)
+	return dst, nil
+}
+
+// des解密,分组方法CBC,key长度是8
+func desDecrypter(cipherText, key []byte) ([]byte, error) {
+	// 创建一个底层使用的 DES 的密码接口
+	block, err := des.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	// 创建一个密码分组模式的接口对象,这里是CBC
+	iv := []byte("12345678")
+	blockMode := cipher.NewCBCDecrypter(block, iv)
+	dst := make([]byte, len(cipherText))
+	blockMode.CryptBlocks(dst, cipherText)
+	return unpaddingLastGroup(dst), nil
+}
+
+// aes加密,分组方法CTR
+func aesEnCrypt(plainText, key []byte) ([]byte, error) {
+	// 创建一个底层使用的 AES 的密码接口
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	// 创建一个密码分组模式的接口对象,这里是CBC
+	iv := []byte("1234567812345678")
+	blockMode := cipher.NewCTR(block, iv)
+	dst := make([]byte, len(plainText))
+	blockMode.XORKeyStream(dst, plainText)
+	return dst, nil
+}
+
+// aes解密,分组方法CTR
+func aesDecrypter(cipherText, key []byte) ([]byte, error) {
+	// 创建一个底层使用的 AES 的密码接口
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	// 创建一个密码分组模式的接口对象,这里是CBC
+	iv := []byte("1234567812345678")
+	blockMode := cipher.NewCTR(block, iv)
+	dst := make([]byte, len(cipherText))
+	blockMode.XORKeyStream(dst, cipherText)
+	return dst, nil
+}
+
+func main() {
+	cipherText, _ := desEnCrypt([]byte("qwerweqrwertwe"), []byte("88888888"))
+	plainText, _ := desDecrypter(cipherText, []byte("88888888"))
+	fmt.Println(cipherText)
+	fmt.Println(string(plainText) == "qwerweqrwertwe")
+	cipherText, _ = aesEnCrypt([]byte("qwerweqrwertwe"), []byte("8888888888888888"))
+	plainText, _ = aesDecrypter(cipherText, []byte("8888888888888888"))
+	fmt.Println(cipherText)
+	fmt.Println(string(plainText) == "qwerweqrwertwe")
+}
+```
 
 ## 非对称加密
+
+1. 对称加密的弊端
+	* 密钥分发困难
+	* 通过非对称加密完成密钥分发
+
+2. 非对称加密的密钥
+	* 不存在密钥分发困难问题
+	* 场景分析
+		* 信息加密(A写数据给B,只允许B读)
+			* A: 公钥 B: 私钥
+		* 登陆认证(客户端登陆,请求服务器,向服务器请求个人数据)
+			* 服务器: 公钥 客户端: 私钥
+		* 数字签名(表明信息的真实性,附在信息原文后)
+			* 发送信息的人: 私钥 收到信息的人: 公钥
+		* 网银U盾 
+			* 个人: 私钥 银行: 公钥
+		* 总结: 数据对谁更重要,谁拿私钥
+		* 直观上私钥比公钥长,一般生成的文件xxx.pub 公钥 xxx 私钥
+
+3. 使用RSA非对称加密通信流程
+
+```lua
+            +---------+                    +---------+
+            | Sender  |                    | Receiver|
+            +---------+                    +---------+
+                |                                |
+                |           生成密钥对            |
+                +------------------------------> |
+                |                                |
+                |          请求公钥               |
+                +------------------------------> |
+                |                                |
+                |          返回公钥               |
+                | <------------------------------+
+                |                                |
+                |        加密数据                  |
+                | -----------------------------> |
+                |                                |
+                |        使用公钥加密数据          |
+                | -----------------------------> |
+                |                                |
+                |        使用私钥解密数据          |
+                | <----------------------------+ |
+                |                                |
+                |          返回解密后的数据        |
+                | <----------------------------+ |
+```
+
+4. 生成RSA的密钥对
+
+	* [RSA加密算法](https://zh.wikipedia.org/wiki/RSA%E5%8A%A0%E5%AF%86%E6%BC%94%E7%AE%97%E6%B3%95)
+
+5. RSA加解密
+
+6. 哈希算法

@@ -1,106 +1,133 @@
 package main
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/des"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"os"
 )
 
-/*
-DES的CBC加密
-1. 编写填充函数,如果最后一个分组字节数不够,填充
-2. 字节数合适的便添加新分组
-3. 填充的字节值 == 减少的字节值
-*/
-
-func paddingLastGroup(plainText []byte, blockSize int) []byte {
-	// 计算最后一组中剩余字节数,通过取余获取,恰好就填充整个一组
-	padNum := blockSize - len(plainText)%blockSize
-	// 创建新的byte切片,长度为panNum,每个字节值为byte(padNum)
-	char := []byte{byte(padNum)}
-	// 新的切片初始化
-	char = bytes.Repeat(char, padNum)
-	plainText = append(plainText, char...)
-	return plainText
-}
-
-func unpaddingLastGroup(plainText []byte) []byte {
-	// 获取最后一位获取填充长度
-	l := int(plainText[len(plainText)-1])
-	return plainText[:len(plainText)-l]
-}
-
-// des加密,分组方法CBC,key长度是8
-func desEnCrypt(plainText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 DES 的密码接口
-	block, err := des.NewCipher(key)
+func readFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	// 根据分组模式进行分组填充(比如CBC,ECB需要填充)
-	plainText = paddingLastGroup(plainText, block.BlockSize())
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("12345678")
-	blockMode := cipher.NewCBCEncrypter(block, iv)
-	dst := make([]byte, len(plainText))
-	blockMode.CryptBlocks(dst, plainText)
-	return dst, nil
-}
-
-// des解密,分组方法CBC,key长度是8
-func desDecrypter(cipherText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 DES 的密码接口
-	block, err := des.NewCipher(key)
+	defer f.Close()
+	fInfo, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("12345678")
-	blockMode := cipher.NewCBCDecrypter(block, iv)
-	dst := make([]byte, len(cipherText))
-	blockMode.CryptBlocks(dst, cipherText)
-	return unpaddingLastGroup(dst), nil
+	buf := make([]byte, fInfo.Size())
+	f.Read(buf)
+	return buf, nil
 }
 
-// aes加密,分组方法CTR
-func aesEnCrypt(plainText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 AES 的密码接口
-	block, err := aes.NewCipher(key)
+// 生成rsa的密钥对,保存到文件
+func GenerateRsaKey(rsaKeyLen int) error {
+	// 私钥生成流程
+	priKey, err := rsa.GenerateKey(rand.Reader, rsaKeyLen)
+	if err != nil {
+		return err
+	}
+	derText := x509.MarshalPKCS1PrivateKey(priKey)
+	blockPri := &pem.Block{
+		Type:  "rsa private key",
+		Bytes: derText,
+	}
+	// 创建文件流句柄
+	fPri, err := os.Create("/tmp/key/private.pem")
+	if err != nil {
+		return err
+	}
+	defer fPri.Close()
+	err = pem.Encode(fPri, blockPri)
+	if err != nil {
+		return err
+	}
+	// 公钥生成流程
+	derStream, err := x509.MarshalPKIXPublicKey(&priKey.PublicKey)
+	if err != nil {
+		return err
+	}
+	blockPub := &pem.Block{
+		Type:  "rsa public key",
+		Bytes: derStream,
+	}
+	fPub, err := os.Create("/tmp/key/public.pem")
+	if err != nil {
+		return err
+	}
+	defer fPub.Close()
+	err = pem.Encode(fPub, blockPub)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// rsa加密,公钥进行加密 /tmp/key/public.pem
+func RSAEncrypt(plainText []byte, pubKeyFile string) ([]byte, error) {
+	// 读取公钥文件内容
+	buf, err := readFile(pubKeyFile)
 	if err != nil {
 		return nil, err
 	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("1234567812345678")
-	blockMode := cipher.NewCTR(block, iv)
-	dst := make([]byte, len(plainText))
-	blockMode.XORKeyStream(dst, plainText)
-	return dst, nil
-}
 
-// aes解密,分组方法CTR
-func aesDecrypter(cipherText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 AES 的密码接口
-	block, err := aes.NewCipher(key)
+	// pem解码
+	block, _ := pem.Decode(buf)
+	// x509规范解码
+	pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("1234567812345678")
-	blockMode := cipher.NewCTR(block, iv)
-	dst := make([]byte, len(cipherText))
-	blockMode.XORKeyStream(dst, cipherText)
-	return dst, nil
+	pubKey, ok := pubAny.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("public key type conversion failed")
+	}
+	// 使用公钥加密
+	cipherText, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, plainText)
+	if err != nil {
+		return nil, err
+	}
+	return cipherText, nil
+}
+
+// rsa解密,私钥进行解密 /tmp/key/private.pem
+func RSADecrypt(cipherText []byte, priKeyFile string) ([]byte, error) {
+	// 读取私钥文件内容
+	buf, err := readFile(priKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// pem解码
+	block, _ := pem.Decode(buf)
+	// x509规范解码
+	priKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	// 使用私钥解密
+	plainText, err := rsa.DecryptPKCS1v15(rand.Reader, priKey, cipherText)
+	if err != nil {
+		return nil, err
+	}
+	return plainText, nil
 }
 
 func main() {
-	cipherText, _ := desEnCrypt([]byte("qwerweqrwertwe"), []byte("88888888"))
-	plainText, _ := desDecrypter(cipherText, []byte("88888888"))
-	fmt.Println(cipherText)
-	fmt.Println(string(plainText) == "qwerweqrwertwe")
-	cipherText, _ = aesEnCrypt([]byte("qwerweqrwertwe"), []byte("8888888888888888"))
-	plainText, _ = aesDecrypter(cipherText, []byte("8888888888888888"))
-	fmt.Println(cipherText)
-	fmt.Println(string(plainText) == "qwerweqrwertwe")
+	GenerateRsaKey(4096)
+	cipherText, err := RSAEncrypt([]byte("你是一只??????????asdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaassdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasdsadsaasd"), "/tmp/key/public.pem")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	plainText, err := RSADecrypt(cipherText, "/tmp/key/private.pem")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(plainText))
 }

@@ -47,7 +47,7 @@
  加密 => 编码 解密 => 解码
 
 2. DES -- Data Encryption Standard
-	* 什么是DES（Data Encryption Standard）:[资料加密标准(DES)](https://zh.wikipedia.org/zh-hans/%E8%B3%87%E6%96%99%E5%8A%A0%E5%AF%86%E6%A8%99%E6%BA%96)
+	* 什么是DES（Data Encryption Standard）:[资料加密标准(DES)](https://zh.wikipedia.org/zh-hans/è³æå å¯æ¨æº)
 
 	* 加密和解密
 
@@ -89,7 +89,7 @@
 		* * 密钥1解密,密钥2加密,密钥3解密
 
 3. AES -- Advanced Encryption Standard
-	* 什么是AES（Advanced Encryption Standard）: [高级加密标准（英语：Advanced Encryption Standard，缩写：AES），又称Rijndael加密法](https://zh.wikipedia.org/wiki/%E9%AB%98%E7%BA%A7%E5%8A%A0%E5%AF%86%E6%A0%87%E5%87%86)
+	* 什么是AES（Advanced Encryption Standard）: [高级加密标准（英语：Advanced Encryption Standard，缩写：AES），又称Rijndael加密法](https://zh.wikipedia.org/wiki/é«çº§å å¯æ å)
 	* 使用AES方式加密安全吗?
 		* 安全,效率高,推荐
 	* 是不是分组密码?
@@ -103,7 +103,7 @@
 		* go目前使用的是16byte
 
 4. 分组密码模式
-	* 维基百科: [分组密码工作模式](https://zh.wikipedia.org/wiki/%E5%88%86%E7%BB%84%E5%AF%86%E7%A0%81%E5%B7%A5%E4%BD%9C%E6%A8%A1%E5%BC%8F)
+	* 维基百科: [分组密码工作模式](https://zh.wikipedia.org/wiki/åç»å¯ç å·¥ä½æ¨¡å¼)
 	* 按位异或
 		* 数据转换为二进制
 		* 按位异或的操作符: ^
@@ -329,7 +329,7 @@ func main() {
 
 4. 生成RSA的密钥对
 
-	* [RSA加密算法](https://zh.wikipedia.org/wiki/RSA%E5%8A%A0%E5%AF%86%E6%BC%94%E7%AE%97%E6%B3%95)
+	* [RSA加密算法](https://zh.wikipedia.org/wiki/RSAå å¯æ¼ç®æ³)
 	* [Golang中RSA相关package](https://pkg.go.dev/crypto/rsa)
 	* [Golang中x509相关package](https://pkg.go.dev/crypto/x509)
 	* [Golang中pem相关package](https://pkg.go.dev/encoding/pem)
@@ -543,4 +543,43 @@ func main() {
 }
 ```
 
-6. 哈希算法
+6. ECC 椭圆曲线
+	* [椭圆曲线密码学](https://zh.wikipedia.org/wiki/æ¤­åæ²çº¿å¯ç å­¦)
+	* go中的椭圆曲线相关package
+		* [crypto/elliptic](https://pkg.go.dev/crypto/elliptic@go1.21.0)
+		* [crypto/ecdsa](https://pkg.go.dev/crypto/ecdsa@go1.21.0)
+
+7. 对称加密和非对称加密比较
+	* 对称加密
+		* 使用相同的密钥进行加密和解密。
+		* 加密和解密速度较快，适用于大量数据的加密。
+		* 密钥的管理较为复杂，需要确保密钥的安全性。
+		* 不适用于需要安全地传输密钥的场景。
+	* 非对称加密
+		* 使用两个密钥，一个用于加密，另一个用于解密。
+		* 加密和解密速度较慢。
+		* 密钥的管理相对简单，只需保护私钥的安全性。
+		* 适用于需要安全地传输密钥的场景，例如数字证书和安全通信。
+	* 总结：
+		* 对称加密适用于需要高效加密和解密大量数据的场景
+		* 非对称加密适用于需要安全地传输密钥和进行安全通信的场景。
+		* 在实际应用中，通常会结合使用对称加密和非对称加密，以兼顾效率和安全性。
+
+## 哈希函数
+
+1. 概念
+
+ 单向散列函数,哈希函数,散列函数,消息摘要函数,杂凑函数都是一种
+
+ [散列函數](https://zh.wikipedia.org/wiki/æ£åå½æ¸)
+
+ 接收的输入: 原像
+ 输出: 散列值,哈希值,指纹,摘要
+
+2. 特性
+
+	* 将任意长度的数据转换成固定成都的数据
+	* 很强的抗碰撞性
+	* 不可逆
+
+3. chang

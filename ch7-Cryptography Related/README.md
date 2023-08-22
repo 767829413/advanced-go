@@ -582,4 +582,61 @@ func main() {
 	* 很强的抗碰撞性
 	* 不可逆
 
-3. chang
+3. 常用哈希函数
+
+	* [MD4,MD5](https://zh.wikipedia.org/wiki/MD5)
+		* 不安全
+		* 散列值长度: 128bit == 16byte
+	* [SHA家族](https://zh.wikipedia.org/wiki/SHA%E5%AE%B6%E6%97%8F)
+		* 安全性
+			* sha-1: 不安全
+			* sha-2及以上: 目前安全
+		* 散列值长度: 
+			* sha-1: 160bit == 20byte
+			* sha-224: 224bit == 28byte
+			* sha-256: 256bit == 32byte
+			* sha-384: 384bit == 48byte
+			* sha-512: 512bit == 64byte
+
+4. go中使用哈希函数
+
+	* [crypto/md5](https://pkg.go.dev/crypto/md5@go1.21.0)
+	* [crypto/sha1](https://pkg.go.dev/crypto/sha1@go1.21.0)
+	* [crypto/sha256](https://pkg.go.dev/crypto/sha256@go1.21.0)
+	* [crypto/sha512](https://pkg.go.dev/crypto/sha512@go1.21.0)
+
+```go
+package main
+
+import (
+	"crypto/md5"
+	"fmt"
+	"io"
+	"log"
+	"os"
+)
+
+func main() {
+	// md5 sha1 sha256 sha512 使用方式都类似
+	// 第一种方式
+	data := []byte("These pretzels are making me thirsty.")
+	fmt.Printf("%x", md5.Sum(data))
+	// 第二种方式
+	h := md5.New()
+	io.WriteString(h, "The fog is getting thicker!")
+	io.WriteString(h, "And Leon's getting laaarger!")
+	fmt.Printf("%x", h.Sum(nil))
+	// 第三种方式
+	f, err := os.Open("file.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	h := md5.New()
+	if _, err := io.Copy(h, f); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%x", h.Sum(nil))	
+}
+```

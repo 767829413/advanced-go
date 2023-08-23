@@ -169,114 +169,114 @@
 			* [CBC|CFB|OFB|CTR](https://pkg.go.dev/crypto/cipher@go1.21.0#Block)
 		4. 加密得到密文
 
-```go
-package main
+		```go
+		package main
 
-import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/des"
-	"fmt"
-)
+		import (
+			"bytes"
+			"crypto/aes"
+			"crypto/cipher"
+			"crypto/des"
+			"fmt"
+		)
 
-/*
-DES的CBC加密
-1. 编写填充函数,如果最后一个分组字节数不够,填充
-2. 字节数合适的便添加新分组
-3. 填充的字节值 == 减少的字节值
-*/
+		/*
+		DES的CBC加密
+		1. 编写填充函数,如果最后一个分组字节数不够,填充
+		2. 字节数合适的便添加新分组
+		3. 填充的字节值 == 减少的字节值
+		*/
 
-func paddingLastGroup(plainText []byte, blockSize int) []byte {
-	// 计算最后一组中剩余字节数,通过取余获取,恰好就填充整个一组
-	padNum := blockSize - len(plainText)%blockSize
-	// 创建新的byte切片,长度为panNum,每个字节值为byte(padNum)
-	char := []byte{byte(padNum)}
-	// 新的切片初始化
-	char = bytes.Repeat(char, padNum)
-	plainText = append(plainText, char...)
-	return plainText
-}
+		func paddingLastGroup(plainText []byte, blockSize int) []byte {
+			// 计算最后一组中剩余字节数,通过取余获取,恰好就填充整个一组
+			padNum := blockSize - len(plainText)%blockSize
+			// 创建新的byte切片,长度为panNum,每个字节值为byte(padNum)
+			char := []byte{byte(padNum)}
+			// 新的切片初始化
+			char = bytes.Repeat(char, padNum)
+			plainText = append(plainText, char...)
+			return plainText
+		}
 
-func unpaddingLastGroup(plainText []byte) []byte {
-	// 获取最后一位获取填充长度
-	l := int(plainText[len(plainText)-1])
-	return plainText[:len(plainText)-l]
-}
+		func unpaddingLastGroup(plainText []byte) []byte {
+			// 获取最后一位获取填充长度
+			l := int(plainText[len(plainText)-1])
+			return plainText[:len(plainText)-l]
+		}
 
-// des加密,分组方法CBC,key长度是8
-func desEnCrypt(plainText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 DES 的密码接口
-	block, err := des.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	// 根据分组模式进行分组填充(比如CBC,ECB需要填充)
-	plainText = paddingLastGroup(plainText, block.BlockSize())
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("12345678")
-	blockMode := cipher.NewCBCEncrypter(block, iv)
-	dst := make([]byte, len(plainText))
-	blockMode.CryptBlocks(dst, plainText)
-	return dst, nil
-}
+		// des加密,分组方法CBC,key长度是8
+		func desEnCrypt(plainText, key []byte) ([]byte, error) {
+			// 创建一个底层使用的 DES 的密码接口
+			block, err := des.NewCipher(key)
+			if err != nil {
+				return nil, err
+			}
+			// 根据分组模式进行分组填充(比如CBC,ECB需要填充)
+			plainText = paddingLastGroup(plainText, block.BlockSize())
+			// 创建一个密码分组模式的接口对象,这里是CBC
+			iv := []byte("12345678")
+			blockMode := cipher.NewCBCEncrypter(block, iv)
+			dst := make([]byte, len(plainText))
+			blockMode.CryptBlocks(dst, plainText)
+			return dst, nil
+		}
 
-// des解密,分组方法CBC,key长度是8
-func desDecrypter(cipherText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 DES 的密码接口
-	block, err := des.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("12345678")
-	blockMode := cipher.NewCBCDecrypter(block, iv)
-	dst := make([]byte, len(cipherText))
-	blockMode.CryptBlocks(dst, cipherText)
-	return unpaddingLastGroup(dst), nil
-}
+		// des解密,分组方法CBC,key长度是8
+		func desDecrypter(cipherText, key []byte) ([]byte, error) {
+			// 创建一个底层使用的 DES 的密码接口
+			block, err := des.NewCipher(key)
+			if err != nil {
+				return nil, err
+			}
+			// 创建一个密码分组模式的接口对象,这里是CBC
+			iv := []byte("12345678")
+			blockMode := cipher.NewCBCDecrypter(block, iv)
+			dst := make([]byte, len(cipherText))
+			blockMode.CryptBlocks(dst, cipherText)
+			return unpaddingLastGroup(dst), nil
+		}
 
-// aes加密,分组方法CTR
-func aesEnCrypt(plainText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 AES 的密码接口
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("1234567812345678")
-	blockMode := cipher.NewCTR(block, iv)
-	dst := make([]byte, len(plainText))
-	blockMode.XORKeyStream(dst, plainText)
-	return dst, nil
-}
+		// aes加密,分组方法CTR
+		func aesEnCrypt(plainText, key []byte) ([]byte, error) {
+			// 创建一个底层使用的 AES 的密码接口
+			block, err := aes.NewCipher(key)
+			if err != nil {
+				return nil, err
+			}
+			// 创建一个密码分组模式的接口对象,这里是CBC
+			iv := []byte("1234567812345678")
+			blockMode := cipher.NewCTR(block, iv)
+			dst := make([]byte, len(plainText))
+			blockMode.XORKeyStream(dst, plainText)
+			return dst, nil
+		}
 
-// aes解密,分组方法CTR
-func aesDecrypter(cipherText, key []byte) ([]byte, error) {
-	// 创建一个底层使用的 AES 的密码接口
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	// 创建一个密码分组模式的接口对象,这里是CBC
-	iv := []byte("1234567812345678")
-	blockMode := cipher.NewCTR(block, iv)
-	dst := make([]byte, len(cipherText))
-	blockMode.XORKeyStream(dst, cipherText)
-	return dst, nil
-}
+		// aes解密,分组方法CTR
+		func aesDecrypter(cipherText, key []byte) ([]byte, error) {
+			// 创建一个底层使用的 AES 的密码接口
+			block, err := aes.NewCipher(key)
+			if err != nil {
+				return nil, err
+			}
+			// 创建一个密码分组模式的接口对象,这里是CBC
+			iv := []byte("1234567812345678")
+			blockMode := cipher.NewCTR(block, iv)
+			dst := make([]byte, len(cipherText))
+			blockMode.XORKeyStream(dst, cipherText)
+			return dst, nil
+		}
 
-func main() {
-	cipherText, _ := desEnCrypt([]byte("qwerweqrwertwe"), []byte("88888888"))
-	plainText, _ := desDecrypter(cipherText, []byte("88888888"))
-	fmt.Println(cipherText)
-	fmt.Println(string(plainText) == "qwerweqrwertwe")
-	cipherText, _ = aesEnCrypt([]byte("qwerweqrwertwe"), []byte("8888888888888888"))
-	plainText, _ = aesDecrypter(cipherText, []byte("8888888888888888"))
-	fmt.Println(cipherText)
-	fmt.Println(string(plainText) == "qwerweqrwertwe")
-}
-```
+		func main() {
+			cipherText, _ := desEnCrypt([]byte("qwerweqrwertwe"), []byte("88888888"))
+			plainText, _ := desDecrypter(cipherText, []byte("88888888"))
+			fmt.Println(cipherText)
+			fmt.Println(string(plainText) == "qwerweqrwertwe")
+			cipherText, _ = aesEnCrypt([]byte("qwerweqrwertwe"), []byte("8888888888888888"))
+			plainText, _ = aesDecrypter(cipherText, []byte("8888888888888888"))
+			fmt.Println(cipherText)
+			fmt.Println(string(plainText) == "qwerweqrwertwe")
+		}
+		```
 
 ## 非对称加密
 
@@ -380,64 +380,64 @@ func main() {
 		* 将公钥字符串设置到pem格式块中
 		* 通过pem将设置好的数据进行编码,并写入磁盘文件
 
-```go
-package main
+		```go
+		package main
 
-import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"os"
-)
+		import (
+			"crypto/rand"
+			"crypto/rsa"
+			"crypto/x509"
+			"encoding/pem"
+			"os"
+		)
 
-// 生成rsa的密钥对,保存到文件
-func GenerateRsaKey(rsaKeyLen int) error {
-	// 私钥生成流程
-	priKey, err := rsa.GenerateKey(rand.Reader, rsaKeyLen)
-	if err != nil {
-		return err
-	}
-	derText := x509.MarshalPKCS1PrivateKey(priKey)
-	blockPri := &pem.Block{
-		Type:  "rsa private key",
-		Bytes: derText,
-	}
-	// 创建文件流句柄
-	fPri, err := os.Create("/tmp/key/private.pem")
-	if err != nil {
-		return err
-	}
-	defer fPri.Close()
-	err = pem.Encode(fPri, blockPri)
-	if err != nil {
-		return err
-	}
-	// 公钥生成流程
-	derStream, err := x509.MarshalPKIXPublicKey(&priKey.PublicKey)
-	if err != nil {
-		return err
-	}
-	blockPub := &pem.Block{
-		Type:  "rsa public key",
-		Bytes: derStream,
-	}
-	fPub, err := os.Create("/tmp/key/public.pem")
-	if err != nil {
-		return err
-	}
-	defer fPub.Close()
-	err = pem.Encode(fPub, blockPub)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+		// 生成rsa的密钥对,保存到文件
+		func GenerateRsaKey(rsaKeyLen int) error {
+			// 私钥生成流程
+			priKey, err := rsa.GenerateKey(rand.Reader, rsaKeyLen)
+			if err != nil {
+				return err
+			}
+			derText := x509.MarshalPKCS1PrivateKey(priKey)
+			blockPri := &pem.Block{
+				Type:  "rsa private key",
+				Bytes: derText,
+			}
+			// 创建文件流句柄
+			fPri, err := os.Create("/tmp/key/private.pem")
+			if err != nil {
+				return err
+			}
+			defer fPri.Close()
+			err = pem.Encode(fPri, blockPri)
+			if err != nil {
+				return err
+			}
+			// 公钥生成流程
+			derStream, err := x509.MarshalPKIXPublicKey(&priKey.PublicKey)
+			if err != nil {
+				return err
+			}
+			blockPub := &pem.Block{
+				Type:  "rsa public key",
+				Bytes: derStream,
+			}
+			fPub, err := os.Create("/tmp/key/public.pem")
+			if err != nil {
+				return err
+			}
+			defer fPub.Close()
+			err = pem.Encode(fPub, blockPub)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 
-func main() {
-	GenerateRsaKey(1024)
-}
-```
+		func main() {
+			GenerateRsaKey(1024)
+		}
+		```
 
 5. RSA加解密
 	* 加密
@@ -451,100 +451,100 @@ func main() {
 			* func EncryptPKCS1v15(random io.Reader, pub *PublicKey, msg []byte) ([]byte, error)
 	* 解密
 
-```go
-package main
+	```go
+	package main
 
-import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
-	"os"
-)
+	import (
+		"crypto/rand"
+		"crypto/rsa"
+		"crypto/x509"
+		"encoding/pem"
+		"fmt"
+		"os"
+	)
 
-func readFile(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fInfo, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	buf := make([]byte, fInfo.Size())
-	f.Read(buf)
-	return buf, nil
-}
-
-// rsa加密,公钥进行加密 /tmp/key/public.pem
-func RSAEncrypt(plainText []byte, pubKeyFile string) ([]byte, error) {
-	// 读取公钥文件内容
-	buf, err := readFile(pubKeyFile)
-	if err != nil {
-		return nil, err
+	func readFile(path string) ([]byte, error) {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		fInfo, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+		buf := make([]byte, fInfo.Size())
+		f.Read(buf)
+		return buf, nil
 	}
 
-	// pem解码
-	block, _ := pem.Decode(buf)
-	// x509规范解码
-	pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	pubKey, ok := pubAny.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("public key type conversion failed")
-	}
-	// 使用公钥加密
-	cipherText, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, plainText)
-	if err != nil {
-		return nil, err
-	}
-	return cipherText, nil
-}
+	// rsa加密,公钥进行加密 /tmp/key/public.pem
+	func RSAEncrypt(plainText []byte, pubKeyFile string) ([]byte, error) {
+		// 读取公钥文件内容
+		buf, err := readFile(pubKeyFile)
+		if err != nil {
+			return nil, err
+		}
 
-// rsa解密,私钥进行解密 /tmp/key/private.pem
-func RSADecrypt(cipherText []byte, priKeyFile string) ([]byte, error) {
-	// 读取私钥文件内容
-	buf, err := readFile(priKeyFile)
-	if err != nil {
-		return nil, err
+		// pem解码
+		block, _ := pem.Decode(buf)
+		// x509规范解码
+		pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		pubKey, ok := pubAny.(*rsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("public key type conversion failed")
+		}
+		// 使用公钥加密
+		cipherText, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, plainText)
+		if err != nil {
+			return nil, err
+		}
+		return cipherText, nil
 	}
 
-	// pem解码
-	block, _ := pem.Decode(buf)
-	// x509规范解码
-	priKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	// 使用私钥解密
-	plainText, err := rsa.DecryptPKCS1v15(rand.Reader, priKey, cipherText)
-	if err != nil {
-		return nil, err
-	}
-	return plainText, nil
-}
+	// rsa解密,私钥进行解密 /tmp/key/private.pem
+	func RSADecrypt(cipherText []byte, priKeyFile string) ([]byte, error) {
+		// 读取私钥文件内容
+		buf, err := readFile(priKeyFile)
+		if err != nil {
+			return nil, err
+		}
 
-func main() {
-	cipherText, err := RSAEncrypt([]byte("你是一只巨"), "/tmp/key/public.pem")
-	if err != nil {
-		fmt.Println(err)
-		return
+		// pem解码
+		block, _ := pem.Decode(buf)
+		// x509规范解码
+		priKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		// 使用私钥解密
+		plainText, err := rsa.DecryptPKCS1v15(rand.Reader, priKey, cipherText)
+		if err != nil {
+			return nil, err
+		}
+		return plainText, nil
 	}
-	plainText, err := RSADecrypt(cipherText, "/tmp/key/private.pem")
-	if err != nil {
-		fmt.Println(err)
-		return
+
+	func main() {
+		cipherText, err := RSAEncrypt([]byte("你是一只巨"), "/tmp/key/public.pem")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		plainText, err := RSADecrypt(cipherText, "/tmp/key/private.pem")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(string(plainText))
 	}
-	fmt.Println(string(plainText))
-}
-```
+	```
 
 6. ECC 椭圆曲线
-	* [椭圆曲线密码学](https://zh.wikipedia.org/wiki/æ¤­åæ²çº¿å¯ç å­¦)
+	* [椭圆曲线密码学](https://zh.wikipedia.org/wiki/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF%E5%AF%86%E7%A0%81%E5%AD%A6s)
 	* go中的椭圆曲线相关package
 		* [crypto/elliptic](https://pkg.go.dev/crypto/elliptic@go1.21.0)
 		* [crypto/ecdsa](https://pkg.go.dev/crypto/ecdsa@go1.21.0)
@@ -605,38 +605,489 @@ func main() {
 	* [crypto/sha256](https://pkg.go.dev/crypto/sha256@go1.21.0)
 	* [crypto/sha512](https://pkg.go.dev/crypto/sha512@go1.21.0)
 
-```go
-package main
+	```go
+	package main
 
-import (
-	"crypto/md5"
-	"fmt"
-	"io"
-	"log"
-	"os"
-)
+	import (
+		"crypto/md5"
+		"fmt"
+		"io"
+		"log"
+		"os"
+	)
 
-func main() {
-	// md5 sha1 sha256 sha512 使用方式都类似
-	// 第一种方式
-	data := []byte("These pretzels are making me thirsty.")
-	fmt.Printf("%x", md5.Sum(data))
-	// 第二种方式
-	h := md5.New()
-	io.WriteString(h, "The fog is getting thicker!")
-	io.WriteString(h, "And Leon's getting laaarger!")
-	fmt.Printf("%x", h.Sum(nil))
-	// 第三种方式
-	f, err := os.Open("file.txt")
-	if err != nil {
-		log.Fatal(err)
+	func main() {
+		// md5 sha1 sha256 sha512 使用方式都类似
+		// 第一种方式
+		data := []byte("These pretzels are making me thirsty.")
+		fmt.Printf("%x", md5.Sum(data))
+		// 第二种方式
+		h := md5.New()
+		io.WriteString(h, "The fog is getting thicker!")
+		io.WriteString(h, "And Leon's getting laaarger!")
+		fmt.Printf("%x", h.Sum(nil))
+		// 第三种方式
+		f, err := os.Open("file.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		h := md5.New()
+		if _, err := io.Copy(h, f); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%x", h.Sum(nil))	
 	}
-	defer f.Close()
+	```
 
-	h := md5.New()
-	if _, err := io.Copy(h, f); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%x", h.Sum(nil))	
-}
-```
+5. 消息认证码
+	* 前提条件: 
+		* 在消息认证码生成的一方和校验的一方必须有一个共同持有的密钥
+		* 双方必须约定好使用同样的哈希函数进行数据计算
+	* 流程: 
+		* 发送者:
+			* 发送原始消息
+			* 将原始消息生成消息验证码
+				* {{原始消息} + 密钥} * 哈希函数 = 散列值(消息认证码)
+			* 将消息发送给对方
+		* 接收者:
+			* 接收原始数据
+			* 接收消息认证码
+			* 校验:
+				* {{接收消息} + 密钥} * 哈希函数 = 新散列值
+				* 校验新的散列值和接收的散列值是否一致
+	* go中如何使用消息认证码
+		* [crypto/hmac](https://pkg.go.dev/crypto/hmac)
+
+		```go
+		package main
+
+		import (
+			"crypto/hmac"
+			"crypto/sha1"
+			"fmt"
+		)
+
+		func GenerateHmac(plainText, key []byte) []byte {
+			h := hmac.New(sha1.New, key)
+			h.Write(plainText)
+			hashText := h.Sum(nil)
+			return hashText
+		}
+
+		func VerifyHmac(plainText, key, hashText []byte) bool {
+			h := hmac.New(sha1.New, key)
+			h.Write(plainText)
+			hashNewText := h.Sum(nil)
+			return hmac.Equal(hashNewText, hashText)
+		}
+
+		func main() {
+			plainText, key := []byte("哈哈哈哈哈哈哈"), []byte("123456")
+			hashText := GenerateHmac(plainText, key)
+			fmt.Println(VerifyHmac(plainText, key, hashText))
+		}
+		```
+
+	* 消息认证码的缺点
+		* 可解决问题
+			* 密钥分发困难
+		* 无法解决问题
+			* 不能进行第三方证明
+			* 不能防止否认
+
+6. 数字签名
+	* 过程:
+		* 签名
+			* 有原始数据对其进行哈希运算 -> 散列值
+			* 使用非对称加密的私钥对散列值加密 -> 签名
+			* 将原始数据和签名一并发送给对方
+		* 签名验证
+			* 接收数据
+				* 原始数据
+				* 数字签名
+			* 数字签名,需要使用公钥进行解密,得到散列值
+			* 对原始数据进行哈希运算得到新的散列值
+			* 校验原始散列值和新的散列值是否一致
+	* 非对称加密和数字签名
+		* 总结: 
+			1. 数据通信
+				* 公钥加密,私钥解密
+			2. 数字签名
+				* 私钥加密,公钥解密
+	* 使用RSA进行数字签名
+		* 使用RSA生成密钥对
+			* 生成密钥对
+			* 序列化
+			* 保存到相应位置持久化
+		* 使用私钥进行数字签名
+			1. 从指定位置获取私钥文件
+			2. 输出私钥文件内容
+			3. 使用pem对私钥文件内容进行解码
+			4. 利用x509将数据还原为私钥内容
+			5. 创建一个哈希对象 -> md5|sha,计算散列值
+			6. 使用rsa相关函数(SignPKCS1v15)对散列值签名
+		* 使用公钥进行认证
+			1. 从指定位置获取公钥文件
+			2. 输出公钥文件内容
+			3. 使用pem对私钥文件内容进行解码
+			4. 利用x509将数据还原为公钥内容
+			5. 将内容进行断言->得到公钥结构体
+			6. 创建一个哈希对象(和签名过程的算法一致) -> md5|sha,计算散列值
+			7. 使用rsa相关函数(VerifyPKCS1v15)对签名进行验证
+		* go中使用RSA进行数字签名
+
+		```go
+		package main
+
+		import (
+			"crypto"
+			"crypto/rand"
+			"crypto/rsa"
+			"crypto/sha512"
+			"crypto/x509"
+			"encoding/pem"
+			"fmt"
+			"log"
+
+			"github.com/767829413/advanced-go/util"
+		)
+
+		var priKeyPath = "/tmp/key/private.pem"
+		var pubKeyPath = "/tmp/key/public.pem"
+
+		func GenerateHmacSHA512(plainText []byte) []byte {
+			mHash := sha512.New()
+			mHash.Write(plainText)
+			hashText := mHash.Sum(nil)
+			return hashText
+		}
+
+		// RSA签名
+		func SignatureRSA(plainText []byte, priKeyPath string) ([]byte, error) {
+			/*
+			   1. 从指定位置获取私钥文件
+			   2. 输出私钥文件内容
+			   3. 使用pem对私钥文件内容进行解码
+			   4. 利用x509将数据还原为私钥内容
+			   5. 创建一个哈希对象 -> md5|sha,计算散列值
+			   6. 使用rsa相关函数(SignPKCS1v15)对散列值签名
+			*/
+			buf, err := util.ReadFile(priKeyPath)
+			if err != nil {
+				return nil, err
+			}
+			// pem解码
+			block, _ := pem.Decode(buf)
+			// x509规范解码
+			priKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			hashText := GenerateHmacSHA512(plainText)
+			return rsa.SignPKCS1v15(rand.Reader, priKey, crypto.SHA512, hashText)
+		}
+
+		// RSA签名校验
+		func VerifySignatureRSA(plainText, sigText []byte, pubKeyPath string) (bool, error) {
+			/*
+				1. 从指定位置获取公钥文件
+				2. 输出公钥文件内容
+				3. 使用pem对私钥文件内容进行解码
+				4. 利用x509将数据还原为公钥内容
+				5. 将内容进行断言->得到公钥结构体
+				6. 创建一个哈希对象(和签名过程的算法一致) -> md5|sha,计算散列值
+				7. 使用rsa相关函数(VerifyPKCS1v15)对签名进行验证
+			*/
+			buf, err := util.ReadFile(pubKeyPath)
+			if err != nil {
+				return false, err
+			}
+			// pem解码
+			block, _ := pem.Decode(buf)
+			// x509规范解码
+			pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+			if err != nil {
+				return false, err
+			}
+			pubKey, ok := pubAny.(*rsa.PublicKey)
+			if !ok {
+				return false, fmt.Errorf("public key type conversion failed")
+			}
+			hashText := GenerateHmacSHA512(plainText)
+			err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA512, hashText, sigText)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		}
+
+		func main() {
+			// util.GenerateRsaKey(1024)
+			plainText := []byte("哈哈健康撒谎看哈上课回答是科技活动空间")
+			sig, err := SignatureRSA(plainText, priKeyPath)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			res, err := VerifySignatureRSA(plainText, sig, pubKeyPath)
+			log.Println(res, err)
+		}
+		```
+
+	* 使用椭圆曲线进行数字签名
+		* [椭圆曲线密码学](https://zh.wikipedia.org/wiki/%E6%A4%AD%E5%9C%86%E6%9B%B2%E7%BA%BF%E5%AF%86%E7%A0%81%E5%AD%A6)
+		* go中的椭圆曲线相关package
+			* [crypto/elliptic](https://pkg.go.dev/crypto/elliptic@go1.21.0)
+			* [crypto/ecdsa](https://pkg.go.dev/crypto/ecdsa@go1.21.0)
+		* 推荐使用的5个素域上的椭圆曲线素数模
+			* P-192 = $2^{192}$ - $2^{64}$ - 1
+			* P-224 = $2^{224}$ - $2^{96}$ + 1
+			* P-256 = $2^{256}$ - $2^{224}$ + $2^{192}$ - $2^{96}$ - 1
+			* P-384 = $2^{384}$ - $2^{128}$ - $2^{96}$ + $2^{32}$ - 1
+			* P-521 = $2^{521}$ - 1
+		* ECC密钥对生成流程
+			1. 使用crypto/ecdsa的(GenerateKey)来生成密钥对
+			2. 将私钥写入磁盘
+				1. 使用x509(MarshalECPrivateKey)将私钥序列化
+				2. 将序列化的数据放到pem.Block结构体中
+				3. 使用pem.Encode()编码
+			2. 将公钥写入磁盘
+				1. 使用x509(MarshalPKIXPublicKey)将私钥序列化
+				2. 将序列化的数据放到pem.Block结构体中
+				3. 使用pem.Encode()编码
+			3. 使用私钥进行数字签名
+				1. 从指定位置获取私钥文件
+				2. 输出私钥文件内容
+				3. 使用pem对私钥文件内容进行解码
+				4. 利用x509(ParseECPrivateKey)将数据还原为私钥内容
+				5. 创建一个哈希对象 -> md5|sha,计算散列值
+				6. 获取散列值
+					* ecdsa相关函数(Sign)
+						* func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err error)
+						* 使用ecdsa相关函数(Sign)对散列值签名,得到 r, s *big.Int
+						* 得到的 r, s *big.Int 不能直接使用,需要进行序列化
+						* 使用math相关函数(MarshalText)进行序列化
+							* func (x *Int) MarshalText() (text []byte, err error)
+					* ecdsa相关函数(SignASN1)
+						* func SignASN1(rand io.Reader, priv *PrivateKey, hash []byte) ([]byte, error)
+						* 得到散列值
+			4. 使用公钥校验数字签名
+				1. 从指定位置获取公钥文件
+				2. 输出公钥文件内容
+				3. 使用pem对私钥文件内容进行解码
+				4. 利用x509(ParsePKIXPublicKey)将数据还原为公钥内容
+				5. 将内容进行断言->得到公钥结构体
+
+				```go
+				type PublicKey struct {
+					elliptic.Curve
+					X, Y *big.Int
+				}
+				```
+
+				6. 创建一个哈希对象(和签名过程的算法一致) -> md5|sha,计算散列值
+				7. 进行验证
+					* ecdsa相关函数(Verify)
+						* func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool
+						* 使用math相关函数(UnmarshalText)进行序列化
+							* func (z *Int) UnmarshalText(text []byte) error
+						* 获取验证结果
+					* ecdsa相关函数(VerifyASN1)
+						* func VerifyASN1(pub *PublicKey, hash, sig []byte) bool
+						* 获取验证结果
+
+			5. 在golang中代码实现
+
+			```go
+			package main
+
+			import (
+				"crypto/ecdsa"
+				"crypto/elliptic"
+				"crypto/rand"
+				"crypto/sha512"
+				"crypto/x509"
+				"encoding/pem"
+				"fmt"
+				"math/big"
+
+				"github.com/767829413/advanced-go/util"
+			)
+
+			var priKeyPath = "/tmp/key/ecdsa/pri.pem"
+			var pubKeyPath = "/tmp/key/ecdsa/pub.pem"
+
+			func GenerateHmacSHA512(plainText []byte) []byte {
+				mHash := sha512.New()
+				mHash.Write(plainText)
+				hashText := mHash.Sum(nil)
+				return hashText
+			}
+
+			func signatureECCPre(plainText []byte, priKeyPath string) (hashText []byte, priKey *ecdsa.PrivateKey, err error) {
+				//1. 从指定位置获取私钥文件
+				//2. 输出私钥文件内容
+				//3. 使用pem对私钥文件内容进行解码
+				//4. 利用x509(ParseECPrivateKey)将数据还原为私钥内容
+				//5. 创建一个哈希对象 -> md5|sha,计算散列值
+				buf, err := util.ReadFile(priKeyPath)
+				if err != nil {
+					return nil, nil, err
+				}
+				// pem解码
+				block, _ := pem.Decode(buf)
+				// x509规范解码
+				priKey, err = x509.ParseECPrivateKey(block.Bytes)
+				if err != nil {
+					return nil, nil, err
+				}
+				hashText = GenerateHmacSHA512(plainText)
+				return hashText, priKey, nil
+			}
+
+			// ECC签名 - 私钥
+			func SignatureECCSign(plainText []byte, priKeyPath string) (r, s []byte, err error) {
+				//* ecdsa相关函数(Sign)
+				//* func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err error)
+				//* 使用ecdsa相关函数(Sign)对散列值签名,得到 r, s *big.Int
+				//* 得到的 r, s *big.Int 不能直接使用,需要进行序列化
+				//* 使用math相关函数(MarshalText)进行序列化
+				//	* func (x *Int) MarshalText() (text []byte, err error)
+				hashText, priKey, err := signatureECCPre(plainText, priKeyPath)
+				if err != nil {
+					return nil, nil, err
+				}
+				rBig, sBig, err := ecdsa.Sign(rand.Reader, priKey, hashText)
+				if err != nil {
+					return nil, nil, err
+				}
+				r, err = rBig.MarshalText()
+				if err != nil {
+					return nil, nil, err
+				}
+				s, err = sBig.MarshalText()
+				if err != nil {
+					return nil, nil, err
+				}
+				return r, s, nil
+			}
+
+			func SignatureECCSignASN1(plainText []byte, priKeyPath string) (sig []byte, err error) {
+				//ecdsa相关函数(SignASN1)
+				//* func SignASN1(rand io.Reader, priv *PrivateKey, hash []byte) ([]byte, error)
+				//* 得到散列值
+				hashText, priKey, err := signatureECCPre(plainText, priKeyPath)
+				if err != nil {
+					return nil, err
+				}
+				return ecdsa.SignASN1(rand.Reader, priKey, hashText)
+			}
+
+			func verifySignatureECCPre(plainText []byte, pubKeyPath string) ([]byte, *ecdsa.PublicKey, error) {
+				//1. 从指定位置获取公钥文件
+				//2. 输出公钥文件内容
+				//3. 使用pem对私钥文件内容进行解码
+				//4. 利用x509(ParsePKIXPublicKey)将数据还原为公钥内容
+				//5. 将内容进行断言->得到公钥结构体
+
+				//```go
+				//type PublicKey struct {
+				//	elliptic.Curve
+				//	X, Y *big.Int
+				//}
+				//```
+
+				//6. 创建一个哈希对象(和签名过程的算法一致) -> md5|sha,计算散列值
+				buf, err := util.ReadFile(pubKeyPath)
+				if err != nil {
+					return nil, nil, err
+				}
+				// pem解码
+				block, _ := pem.Decode(buf)
+				// x509规范解码
+				pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+				if err != nil {
+					return nil, nil, err
+				}
+				pubKey, ok := pubAny.(*ecdsa.PublicKey)
+				if !ok {
+					return nil, nil, fmt.Errorf("public key type conversion failed")
+				}
+				hashText := GenerateHmacSHA512(plainText)
+				return hashText, pubKey, nil
+			}
+
+			// ECC校验签名 - 公钥
+			func VerifySignatureECCASN1(plainText, sig []byte, pubKeyPath string) (bool, error) {
+				//* ecdsa相关函数(VerifyASN1)
+				//* func VerifyASN1(pub *PublicKey, hash, sig []byte) bool
+				//* 获取验证结果
+				hashText, pubKey, err := verifySignatureECCPre(plainText, pubKeyPath)
+				if err != nil {
+					return false, nil
+				}
+				return ecdsa.VerifyASN1(pubKey, hashText, sig), nil
+
+			}
+
+			func VerifySignatureECC(plainText, r, s []byte, pubKeyPath string) (bool, error) {
+				//* ecdsa相关函数(Verify)
+				//* func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool
+				//* 使用math相关函数(UnmarshalText)进行序列化
+				//	* func (z *Int) UnmarshalText(text []byte) error
+				//* 获取验证结果
+				hashText, pubKey, err := verifySignatureECCPre(plainText, pubKeyPath)
+				if err != nil {
+					return false, nil
+				}
+				var rBig, sBig big.Int
+				err = rBig.UnmarshalText(r)
+				if err != nil {
+					return false, nil
+				}
+				err = sBig.UnmarshalText(s)
+				if err != nil {
+					return false, nil
+				}
+				return ecdsa.Verify(pubKey, hashText, &rBig, &sBig), nil
+			}
+
+			func main() {
+				util.GenerateEccKey(elliptic.P384(), "/tmp/key/ecdsa/pri.pem", "/tmp/key/ecdsa/pub.pem")
+
+				plainText1 := []byte("sdsdsdsdsdssds")
+				plainText2 := []byte("gffgfdhfgjfgjj")
+
+				r, s, err := SignatureECCSign(plainText1, priKeyPath)
+				if err != nil {
+					fmt.Println("SignatureECCSign error: ", err)
+					return
+				}
+				fmt.Println("VerifySignatureECC:")
+				fmt.Println(VerifySignatureECC(plainText1, r, s, pubKeyPath))
+				fmt.Println()
+				sig, err := SignatureECCSignASN1(plainText2, priKeyPath)
+				if err != nil {
+					fmt.Println("SignatureECCSignASN1 error: ", err)
+					return
+				}
+				fmt.Println("VerifySignatureECCASN1:")
+				fmt.Println(VerifySignatureECCASN1(plainText2, sig, pubKeyPath))
+			}
+			```
+
+			6. 数字签名的缺点
+				* 无法确定公钥是否为消息发送方
+					* 引入第三方认证机构(CA)
+
+## 证书相关
+
+1. 证书
+
+2. SSL/TLS
+
+3. https
+
+4. 自签名证书

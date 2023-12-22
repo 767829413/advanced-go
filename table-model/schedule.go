@@ -23,7 +23,7 @@ type DailySchedule struct {
 type ClassTimeSchedule struct {
 	ID              int64                  `gorm:"primaryKey;column:id" json:"id"`
 	OrgID           *int64                 `gorm:"column:org_id" json:"org_id"`                                      // 机构校区id
-	TeacherId       *int64                 `gorm:"column:teacher_id" json:"teacher_id"`                              // 任课老师
+	// TeacherId       *int64                 `gorm:"column:teacher_id" json:"teacher_id"`                              // 任课老师
 	PrimaryId       *int64                 `gorm:"column:primary_id" json:"primary_id"`                              // 主讲老师
 	CourseId        int64                  `gorm:"column:start_time" json:"start_time"`                              // 学科id
 	CourseName      string                 `gorm:"column:course_name" json:"course_name"`                            // 学科名称(冗余字段)

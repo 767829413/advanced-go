@@ -1,4 +1,4 @@
-package osping
+package osPing
 
 import (
 	"fmt"

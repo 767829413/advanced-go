@@ -34,29 +34,132 @@ func main() {
 }
 ```
 
-### 使用 golang.org/x/net/icmp
+### 使用 ip4:icmp 实现
 
-Go的net扩展库专门实现了icmp协议,我们可以使用它来实现ping.
+Go的使用golang.org/x/net/icmp包实现ping.
 
-PS: 
+network需要是ip4:icmp,能够发送ICMP包
 
-1. `如果使用SOCK_RAW实现ping，是需要cap_net_raw权限的,你可以通过下面的命令设置:`
-
-    ```bash
-    setcap cap_net_raw=+ep /path/to/your/compiled/binary
-    ```
-
-2. `在Linux 3.0新实现了一种Socket方式，可以实现普通用户也能执行ping命令:`
-
-    ```bash
-    socket(PF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-    sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
-    ```
-
-实现非特权(non-privileged) 方式的ping, icmp包为我们做了封装，所以我们不必使用底层的socket,而是直接使用icmp.ListenPacket("udp4", "0.0.0.0")来实现.
+发送额度内容是ICMP Echo消息，地址不是UDP地址，是IP 地址
 
 ```go
+package icmpPing
 
+import (
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"time"
+
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
+)
+
+const (
+	protocolICMP = 1
+)
+
+func IcmpPing() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s host\n", os.Args[0])
+		os.Exit(1)
+	}
+	host := os.Args[1]
+
+	// 解析目标主机的 IP 地址
+	dst, err := net.ResolveIPAddr("ip", host)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 创建 ICMP 连接
+	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	// 构造 ICMP 报文
+	msg := &icmp.Message{
+		Type: ipv4.ICMPTypeEcho,
+		Code: 0,
+		Body: &icmp.Echo{
+			ID:   os.Getpid() & 0xffff,
+			Seq:  1,
+			Data: []byte("Hello, are you there!"),
+		},
+	}
+	msgBytes, err := msg.Marshal(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 发送 ICMP 报文
+	start := time.Now()
+	_, err = conn.WriteTo(msgBytes, dst)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 接收 ICMP 报文
+	reply := make([]byte, 1500)
+	for i := 0; i < 3; i++ {
+		err = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		if err != nil {
+			log.Fatal(err)
+		}
+		n, peer, err := conn.ReadFrom(reply)
+		if err != nil {
+			log.Fatal(err)
+		}
+		duration := time.Since(start)
+
+		// 解析 ICMP 报文
+		msg, err = icmp.ParseMessage(protocolICMP, reply[:n])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// 打印结果
+		switch msg.Type {
+		case ipv4.ICMPTypeEchoReply:
+			echoReply, ok := msg.Body.(*icmp.Echo)
+			if !ok {
+				log.Fatal("invalid ICMP Echo Reply message")
+				return
+			}
+			if peer.String() == host && echoReply.ID == os.Getpid()&0xffff && echoReply.Seq == 1 {
+				fmt.Printf("reply from %s: seq=%d time=%v\n", dst.String(), msg.Body.(*icmp.Echo).Seq, duration)
+				return
+			}
+		default:
+			fmt.Printf("unexpected ICMP message type: %v\n", msg.Type)
+		}
+	}
+}
+```
+
+### 使用pro-bing
+
+Go net扩展库提供了icmp包，方便实现ping能力，这里使用一个第三方包: github.com/prometheus-community/pro-bing
+
+下面代码就是一个ping的基本功能，没什么好说的，ping3次得到结果:
+
+```go
+ // ping 并收集结果
+ pinger, err := probing.NewPinger("github.com")
+ if err != nil {
+  panic(err)
+ }
+    // ping的次数
+ pinger.Count = 3
+ err = pinger.Run() // 阻塞直到完成或者超时
+ if err != nil {
+  panic(err)
+ }
+ stats := pinger.Statistics() // 得到统计结果
+ pretty.Println(stats)
 ```
 
 ## References

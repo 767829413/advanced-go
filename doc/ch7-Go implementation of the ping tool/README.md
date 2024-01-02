@@ -142,40 +142,51 @@ func IcmpPing() {
 
 ### 使用pro-bing
 
-Go net扩展库提供了icmp包，方便实现ping能力，这里使用一个第三方包: github.com/prometheus-community/pro-bing
+Go net扩展库提供了icmp包，方便实现ping能力，这里使用一个第三方包: [github.com/prometheus-community/pro-bing](https://github.com/prometheus-community/pro-bing)
 
 下面代码就是一个ping的基本功能，没什么好说的，ping3次得到结果:
 
 ```go
- // ping 并收集结果
- pinger, err := probing.NewPinger("github.com")
- if err != nil {
-  panic(err)
- }
-    // ping的次数
- pinger.Count = 3
- err = pinger.Run() // 阻塞直到完成或者超时
- if err != nil {
-  panic(err)
- }
- stats := pinger.Statistics() // 得到统计结果
- pretty.Println(stats)
+package proBing
+
+import (
+	"fmt"
+	probing "github.com/prometheus-community/pro-bing"
+	"log"
+	"os"
+)
+
+func ProBing() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "usage: %s host\n", os.Args[0])
+		os.Exit(1)
+	}
+	host := os.Args[1]
+
+	pinger, err := probing.NewPinger(host)
+	if err != nil {
+		log.Fatal("probing.NewPinger error: ", err)
+	}
+	// Windows 
+	pinger.SetPrivileged(true)
+	pinger.Count = 3
+	err = pinger.Run() // Blocks until finished.
+	if err != nil {
+		log.Fatal("pinger.Run error: ", err)
+	}
+	stats := pinger.Statistics() // get send/receive/duplicate/rtt stats
+
+	fmt.Println(stats)
+}
 ```
 
-## References
+其他示例可以看看这个库的其他例子
 
-* <https://wudaijun.com/2018/02/go-sync-map-implement/>
-* <https://github.com/kat-co/concurrency-in-go-src>
-* <https://speakerdeck.com/kavya719/understanding-channels>
-* <https://www.zenlife.tk/concurrency-with-keep-order.md?hmsr=joyk.com&utm_source=joyk.com&utm_medium=referral>
-* <https://golang.org/ref/mem>
-* <https://www.hardwaretimes.com/difference-between-l1-l2-and-l3-cache-what-is-cpu-cache/>
-* <https://github.com/lotusirous/go-concurrency-patterns>
-* <https://songlh.github.io/paper/go-study.pdf>
-* <https://github.com/cch123/golang-notes/blob/master/memory_barrier.md>
+## 总结
 
-## 未涉及
+介绍了使用Go语言实现ping工具的几种方式。
 
-* 内置并发结构：sync.Cond
-* 进阶话题：如 acquire、release、sequential consistency、Lock-Free，Wait-free 等等
-* 扩展并发原语：SingleFlight，ErrGroup 等
+1. 通过系统调用的方式，使用os/exec包执行系统命令来实现ping功能
+2. 使用 golang.org/x/net/icmp 包以及 golang.org/x/net/ipv4 包实现了基于ICMP协议的ping功能
+3. 使用第三方库 github.com/prometheus-community/pro-bing 来实现ping功能
+4. 每种方式都有其特点和适用场景，可以根据自己的需求选择合适的方式来实现ping功能

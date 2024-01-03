@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	mrand "math/rand"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	"unsafe"
 )
@@ -46,7 +48,8 @@ func RandStr(n int) string {
 }
 
 func Str2HashInt(s string) uint64 {
-	h := fnv.New64()
+	// h := fnv.New64()
+	h := fnv.New64a()
 	h.Write([]byte(s))
 	return h.Sum64()
 }
@@ -58,7 +61,7 @@ func ErrExit(err error, info string) {
 	}
 }
 
-func getExecPath() string {
+func GetExecPath() string {
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -175,4 +178,53 @@ func GenerateEccKey(c elliptic.Curve, priPath, pubPath string) error {
 		return err
 	}
 	return nil
+}
+
+func ConvertAddrs(_addrs string) ([]string, error) {
+	var (
+		dest  []string
+		addrs = strings.Split(_addrs, ",")
+	)
+
+	for _, addr := range addrs {
+		addr = strings.TrimSpace(addr)
+		ip := net.ParseIP(addr)
+		if ip != nil { // valid ip
+			dest = append(dest, ip.String())
+			continue
+		}
+
+		ip, ipnet, err := net.ParseCIDR(addr)
+		if err == nil && ipnet != nil {
+			for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); increment(ip) {
+				dest = append(dest, ip.String())
+			}
+			continue
+		}
+
+		hosts, err := net.LookupHost(addr)
+		if err != nil {
+			return dest, err
+		}
+		if hosts == nil {
+			return dest, fmt.Errorf("invalid addr %s ", addr)
+		}
+		ipa, err := net.ResolveIPAddr("ip", hosts[0])
+		if err != nil {
+			return dest, fmt.Errorf("failed to dns query addr %s ", addr)
+		}
+
+		dest = append(dest, ipa.String())
+	}
+
+	return dest, nil
+}
+
+func increment(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }

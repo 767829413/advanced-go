@@ -9,6 +9,7 @@ import (
 
 var rw sync.RWMutex
 
+
 func main() {
 
 	ch := make(chan int)

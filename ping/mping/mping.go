@@ -20,7 +20,7 @@ var (
 	bitflipCheck = pflag.BoolP("bitflip", "", false, "check bitflip")
 )
 
-func main() {
+func Run() {
 	pflag.ErrHelp = errors.New("")
 	pflag.Parse()
 
@@ -30,10 +30,12 @@ func main() {
 		return
 	}
 
-	var err error
-	targetAddrs, err = util.ConvertAddrs(args[0])
-	if err != nil {
-		panic(err)
+	for _, arg := range args {
+		tmpArrgs, err := util.ConvertAddrs(arg)
+		if err != nil {
+			panic(err)
+		}
+		targetAddrs = append(targetAddrs, tmpArrgs...)
 	}
 
 	if *packetSize < len(msgPrefix)+8 {

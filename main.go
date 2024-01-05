@@ -5,12 +5,45 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 var rw sync.RWMutex
+var w sync.WaitGroup
 
+func main(){
+	fmt.Println(Len("张"))
+	fmt.Println(Len("z"))
+}
 
-func main() {
+func Len(s string) int {
+	return utf8.RuneCountInString(s)
+}
+
+func main111() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(22222)
+			panic(r)
+		}
+	}()
+
+	w.Add(2)
+
+	go func() {
+		time.Sleep(10 * time.Second)
+		w.Done()
+	}()
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		panic(232323)
+		w.Done()
+	}()
+	w.Wait()
+}
+
+func test() {
 
 	ch := make(chan int)
 

@@ -1,6 +1,8 @@
 module github.com/767829413/advanced-go
 
-go 1.19
+go 1.21.0
+
+toolchain go1.21.5
 
 require (
 	github.com/767829413/tmp-exec v0.0.0-20231219093537-2f427def6e46
@@ -10,9 +12,10 @@ require (
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/mdlayher/icmpx v0.0.0-20230907211528-a6ee44aa5f67
 	github.com/prometheus-community/pro-bing v0.3.0
+	github.com/smallnest/qianmo v0.1.0
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v1.1.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	go.uber.org/ratelimit v0.3.0
 	golang.org/x/net v0.19.0
 	golang.org/x/oauth2 v0.15.0
@@ -36,6 +39,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

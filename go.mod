@@ -10,9 +10,8 @@ require (
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-resty/resty/v2 v2.10.0
 	github.com/go-session/session v3.1.2+incompatible
-	github.com/mdlayher/icmpx v0.0.0-20230907211528-a6ee44aa5f67
+	github.com/kortschak/goroutine v1.1.1
 	github.com/prometheus-community/pro-bing v0.3.0
-	github.com/smallnest/qianmo v0.1.0
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.8.4
@@ -38,16 +37,10 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/josharian/native v1.1.0 // indirect
-	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
-	github.com/mdlayher/netlink v1.7.2 // indirect
-	github.com/mdlayher/socket v0.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/tidwall/buntdb v1.3.0 // indirect

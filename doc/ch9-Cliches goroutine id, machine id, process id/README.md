@@ -628,6 +628,6 @@ ok      github.com/767829413/advanced-go/util   5.810s
 
 观察上来看, Shard 的性能好于 Mutex 和 atomic.
 
-Go 的 issue 中有多个提议希望 Go 官方库增加这个功能, 比如[Issue #8281](https://github.com/golang/go/issues/8281)、[Issue #18802](https://github.com/golang/go/issues/18802), 一些 Gopher 尝试实现, 比如 qiulaidongfeng 的 [Sharded](https://go.dev/cl/552515), 我上面实现的 Shard 就是模仿这个实现的, 只不过我通过黑科技获取到了 pid,不需要改运行时.
+Go 的 issue 中有多个提议希望 Go 官方库增加这个功能, 比如[Issue #8281](https://github.com/golang/go/issues/8281)、[Issue #18802](https://github.com/golang/go/issues/18802), 一些 Gopher 尝试实现, 比如 qiulaidongfeng 的 [Sharded](https://go.dev/cl/552515), 上面实现的 Shard 就是模仿这个实现的, 只不过通过黑魔法获取到了 pid,不需要改运行时.
 
 还有一个非常好的库[cespare/percpu](https://github.com/cespare/percpu), 它的实现和当前实现的 Shard 差不多, 只不过当前实现的泛型的方式, 它还没有修改为泛型, 还在使用interface{}代表值.和现在这个测试差不多, 也可以看到它的测试性能比 Mutex 和 atomic要好点, 对于正在挖掘性能的 Gopher 来说值得关注.但是因为不支持泛型, 它的性能理论上来说比泛型的实现要差一些.

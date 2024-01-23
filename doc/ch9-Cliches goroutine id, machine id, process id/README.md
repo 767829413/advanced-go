@@ -512,67 +512,122 @@ sync.Pool的实现就是利用这个技巧:
 
 [go/src/sync/pool.go at b25f5558c69140deb652337afaab5c1186cd0ff1 · golang/go (github.com):](https://github.com/golang/go/blob/b25f5558c69140deb652337afaab5c1186cd0ff1/src/sync/pool.go#L207)
 
+## per-cpu 模型和性能比较
 
+如果将上面的功能提炼, 就可以实现一个基于 P 的 Shard 数据结构, 可以把它提炼成了一个类型Shard
 
-[1]
-The Go scheduler: https://morsmachine.dk/go-scheduler
+```go
+package util
 
-[2]
-Scalable Go Scheduler Design Doc: https://docs.google.com/document/d/1TTj4T2JO42uD5ID9e89oa0sLKhJYD0Y_kqxDv3I3XMw/
+import (
+	"runtime"
 
-[3]
-badger: https://github.com/dgraph-io/badger
+	"github.com/767829413/advanced-go/goroutine"
+	"golang.org/x/sys/cpu"
+)
 
-[4]
-问题: https://groups.google.com/forum/#!topic/golang-nuts/jPb_h3TvlKE/discussion
+// Shard类型
+type Shard[T any] struct {
+	values []value[T]
+}
 
-[5]
-Go 代码: https://github.com/dgraph-io/badger-bench/blob/master/randread/main.go
+// NewShard创建一个新的Shard.
+func NewShard[T any]() *Shard[T] {
+	n := runtime.GOMAXPROCS(0)
 
-[6]
-fio: https://linux.die.net/man/1/fio
+	return &Shard[T]{
+		values: make([]value[T], n),
+	}
+}
 
-[7]
-参数: https://github.com/dgraph-io/dgraph/commit/30237a1429debab73eff38fea2f724914ca38b77
+// 避免伪共享
+type value[T any] struct {
+	_ cpu.CacheLinePad
+	v T
+	_ cpu.CacheLinePad
+}
 
-[8]
-g: https://github.com/golang/go/blob/master/src/runtime/runtime2.go#L422
+// 得到当前P的值
+func (s *Shard[T]) Get() *T {
+	if len(s.values) == 0 {
+		panic("sync: Sharded is empty and has not been initialized")
+	}
 
-[9]
-No.: https://groups.google.com/forum/#!topic/golang-nuts/Nt0hVV_nqHE
+	return &s.values[int(goroutine.PID())%len(s.values)].v
+}
 
-[10]
-No.: https://groups.google.com/forum/#!topic/golang-nuts/0HGyCOrhuuI
+// 遍历所有的值
+func (s *Shard[T]) Range(f func(*T)) {
+	if len(s.values) == 0 {
+		panic("sync: Sharded is empty and has not been initialized")
+	}
 
-[11]
-No.: http://stackoverflow.com/questions/19115273/looking-for-a-call-or-thread-id-to-use-for-logging
+	for i := range s.values {
+		f(&s.values[i].v)
+	}
+}
+```
 
-[12]
-jtolio/gls: https://github.com/jtolio/gls
+比如实现一个计数器, 可以拿它和 Mutex、atomic 实现的计数器, 在并发情况下进行比较
 
-[13]
-tylerstillwater/gls: https://github.com/tylerstillwater/gls
+```go
+package util
 
-[14]
-petermattis/goid: https://github.com/petermattis/goid
+import (
+	"sync"
+	"sync/atomic"
+	"testing"
+)
 
-[15]
-Go Playground: https://go.dev/play/p/CSOp9wyzydP
+func BenchmarkShardCounter(b *testing.B) {
+	counter := NewShard[atomic.Int64]()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			counter.Get().Add(1)
+		}
+	})
+}
 
-[16]
-kortschak/goroutine: https://github.com/kortschak/goroutine
+func BenchmarkMutexCounter(b *testing.B) {
+	var counter int64
+	var mu sync.Mutex
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			mu.Lock()
+			counter += 1
+			mu.Unlock()
+		}
+	})
+}
 
-[17]
-go/src/sync/pool.go at b25f5558c69140deb652337afaab5c1186cd0ff1 · golang/go (github.com): https://github.com/golang/go/blob/b25f5558c69140deb652337afaab5c1186cd0ff1/src/sync/pool.go#L207
+func BenchmarkAtomicCounter(b *testing.B) {
+	var counter atomic.Int64
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			counter.Add(1)
+		}
+	})
+}
+```
 
-[18]
-Issue #8281: https://github.com/golang/go/issues/8281
+执行下benchmark,结果如下：
 
-[19]
-Issue #18802: https://github.com/golang/go/issues/18802
+```bash
+go test -bench Counter -benchmem .
 
-[20]
-qiulaidongfeng 的 Sharded: https://go.dev/cl/552515
+goos: linux
+goarch: amd64
+pkg: github.com/767829413/advanced-go/util
+cpu: Intel(R) Xeon(R) Platinum
+BenchmarkShardCounter-2         125707922                9.389 ns/op           0 B/op          0 allocs/op
+BenchmarkMutexCounter-2         52898214                29.94 ns/op            0 B/op          0 allocs/op
+BenchmarkAtomicCounter-2        69747235                15.02 ns/op            0 B/op          0 allocs/op
+PASS
+ok      github.com/767829413/advanced-go/util   5.810s
+```
 
-[21]
-cespare/percpu: https://github.com/cespare/percpu
+观察上来看, Shard 的性能好于 Mutex 和 atomic.
+
+Go 的 issue 中有多个提议希望 Go 官方库增加这个功能, 比如[Issue #8281](https://github.com/golang/go/issues/8281)、[Issue #18802](https://github.com/golang/go/issues/18802), 一些 Gopher 尝试实现, 比如 qiulaidongfeng 的 [Sharded](https://go.dev/cl/552515), 我上面实现的 Shard 就是模仿这个实现的, 只不过我通过黑科技获取到了 pid,不需要改运行时.
+
+还有一个非常好的库[cespare/percpu](https://github.com/cespare/percpu), 它的实现和当前实现的 Shard 差不多, 只不过当前实现的泛型的方式, 它还没有修改为泛型, 还在使用interface{}代表值.和现在这个测试差不多, 也可以看到它的测试性能比 Mutex 和 atomic要好点, 对于正在挖掘性能的 Gopher 来说值得关注.但是因为不支持泛型, 它的性能理论上来说比泛型的实现要差一些.

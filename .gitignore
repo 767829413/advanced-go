@@ -1,3 +1,4 @@
 .vscode/
 tmp
 config/conf
+sql

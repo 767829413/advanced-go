@@ -2,35 +2,31 @@ package main
 
 import (
 	"fmt"
-	"github.com/kortschak/goroutine"
-	"sort"
-	"time"
+	"strconv"
 )
 
 func main() {
-	links := goroutine.All()
-	sort.Slice(links, func(i, j int) bool {
-		return links[i].Child < links[j].Child
-	})
-
-	for _, link := range links {
-		fmt.Printf("%d -> %d\n", link.Parent, link.Child)
-	}
+	var i int64 = 0
+	fmt.Println(23232, strconv.FormatInt(i, 10))
+	// m := mystruct{0}
+	// test(m)  //错误
+	// test(*m) //错误
 }
 
-func foo(depth int) {
-	fmt.Printf("goroutine #%d: depth=%d, parent: #%d\n", goroutine.ID(), depth, goroutine.ParentID())
-
-	if depth == 0 {
-		return
-	}
-
-	go foo(depth - 1)
+type myinterface interface {
+	print()
 }
 
-func mainxxx() {
-	depth := 5
-	go foo(depth)
+func test(value *myinterface) { // 这里不应该使用 myinterface 的指针
+	//someting to do ...
+}
 
-	time.Sleep(1 * time.Second)
+type mystruct struct {
+	i int
+}
+
+// 实现接口
+func (this *mystruct) print() {
+	fmt.Println(this.i)
+	this.i = 1
 }

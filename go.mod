@@ -8,7 +8,6 @@ require (
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/go-session/session v3.1.2+incompatible
-	github.com/kortschak/goroutine v1.1.1
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v1.1.0

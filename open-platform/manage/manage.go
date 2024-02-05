@@ -376,7 +376,7 @@ func (m *Manager) RefreshAccessToken(
 
 	oldAccess, oldRefresh := ti.GetAccess(), ti.GetRefresh()
 
-	td := &GenerateBasic{
+	td := &oauth2.GenerateBasic{
 		Client:    cli,
 		UserID:    ti.GetUserID(),
 		CreateAt:  time.Now(),

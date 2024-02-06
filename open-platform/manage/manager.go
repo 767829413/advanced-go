@@ -21,10 +21,13 @@ type ManagerIns struct {
 }
 
 // NewManager create to authorization management instance
-func NewManager() Manager {
+func NewManager(validateURI ValidateURIHandler) *ManagerIns {
+	if validateURI == nil {
+		validateURI = DefaultValidateURI
+	}
 	return &ManagerIns{
 		gtcfg:       make(map[config.GrantType]*config.Config),
-		validateURI: DefaultValidateURI,
+		validateURI: validateURI,
 	}
 }
 
@@ -99,6 +102,70 @@ func (m *ManagerIns) MustTokenStorage(stor store.TokenStore, err error) {
 	m.tokenStore = stor
 }
 
+// get authorization code data
+func (m *ManagerIns) getAuthorizationCode(
+	ctx context.Context,
+	code string,
+) (generates.TokenInfo, error) {
+	ti, err := m.tokenStore.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	} else if ti == nil || ti.GetCode() != code || ti.GetCodeCreateAt().Add(ti.GetCodeExpiresIn()).Before(time.Now()) {
+		return nil, errors.ErrInvalidAuthorizeCode
+	}
+	return ti, nil
+}
+
+// delete authorization code data
+func (m *ManagerIns) delAuthorizationCode(ctx context.Context, code string) error {
+	return m.tokenStore.RemoveByCode(ctx, code)
+}
+
+// get and delete authorization code data
+func (m *ManagerIns) getAndDelAuthorizationCode(
+	ctx context.Context,
+	tgr *TokenGenerateRequest,
+) (generates.TokenInfo, error) {
+	code := tgr.Code
+	ti, err := m.getAuthorizationCode(ctx, code)
+	if err != nil {
+		return nil, err
+	} else if ti.GetClientID() != tgr.ClientID {
+		return nil, errors.ErrInvalidAuthorizeCode
+	} else if codeURI := ti.GetRedirectURI(); codeURI != "" && codeURI != tgr.RedirectURI {
+		return nil, errors.ErrInvalidAuthorizeCode
+	}
+
+	err = m.delAuthorizationCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	return ti, nil
+}
+
+func (m *ManagerIns) validateCodeChallenge(ti generates.TokenInfo, ver string) error {
+	cc := ti.GetCodeChallenge()
+	// early return
+	if cc == "" && ver == "" {
+		return nil
+	}
+	if cc == "" {
+		return errors.ErrMissingCodeVerifier
+	}
+	if ver == "" {
+		return errors.ErrMissingCodeVerifier
+	}
+	ccm := ti.GetCodeChallengeMethod()
+	if ccm.String() == "" {
+		ccm = config.CodeChallengePlain
+	}
+	if !ccm.Validate(cc, ver) {
+		return errors.ErrInvalidCodeChallenge
+	}
+	return nil
+}
+
+// impl interface Manager
 // GenerateAuthToken generate the authorization token(code)
 func (m *ManagerIns) GenerateAuthToken(
 	ctx context.Context,
@@ -176,69 +243,7 @@ func (m *ManagerIns) GenerateAuthToken(
 	return ti, nil
 }
 
-// get authorization code data
-func (m *ManagerIns) getAuthorizationCode(
-	ctx context.Context,
-	code string,
-) (generates.TokenInfo, error) {
-	ti, err := m.tokenStore.GetByCode(ctx, code)
-	if err != nil {
-		return nil, err
-	} else if ti == nil || ti.GetCode() != code || ti.GetCodeCreateAt().Add(ti.GetCodeExpiresIn()).Before(time.Now()) {
-		return nil, errors.ErrInvalidAuthorizeCode
-	}
-	return ti, nil
-}
-
-// delete authorization code data
-func (m *ManagerIns) delAuthorizationCode(ctx context.Context, code string) error {
-	return m.tokenStore.RemoveByCode(ctx, code)
-}
-
-// get and delete authorization code data
-func (m *ManagerIns) getAndDelAuthorizationCode(
-	ctx context.Context,
-	tgr *TokenGenerateRequest,
-) (generates.TokenInfo, error) {
-	code := tgr.Code
-	ti, err := m.getAuthorizationCode(ctx, code)
-	if err != nil {
-		return nil, err
-	} else if ti.GetClientID() != tgr.ClientID {
-		return nil, errors.ErrInvalidAuthorizeCode
-	} else if codeURI := ti.GetRedirectURI(); codeURI != "" && codeURI != tgr.RedirectURI {
-		return nil, errors.ErrInvalidAuthorizeCode
-	}
-
-	err = m.delAuthorizationCode(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-	return ti, nil
-}
-
-func (m *ManagerIns) validateCodeChallenge(ti generates.TokenInfo, ver string) error {
-	cc := ti.GetCodeChallenge()
-	// early return
-	if cc == "" && ver == "" {
-		return nil
-	}
-	if cc == "" {
-		return errors.ErrMissingCodeVerifier
-	}
-	if ver == "" {
-		return errors.ErrMissingCodeVerifier
-	}
-	ccm := ti.GetCodeChallengeMethod()
-	if ccm.String() == "" {
-		ccm = config.CodeChallengePlain
-	}
-	if !ccm.Validate(cc, ver) {
-		return errors.ErrInvalidCodeChallenge
-	}
-	return nil
-}
-
+// impl interface Manager
 // GenerateAccessToken generate the access token
 func (m *ManagerIns) GenerateAccessToken(
 	ctx context.Context,
@@ -325,6 +330,7 @@ func (m *ManagerIns) GenerateAccessToken(
 	return ti, nil
 }
 
+// impl interface Manager
 // RefreshAccessToken refreshing an access token
 func (m *ManagerIns) RefreshAccessToken(
 	ctx context.Context,
@@ -405,6 +411,7 @@ func (m *ManagerIns) RefreshAccessToken(
 	return ti, nil
 }
 
+// impl interface Manager
 // RemoveAccessToken use the access token to delete the token information
 func (m *ManagerIns) RemoveAccessToken(ctx context.Context, access string) error {
 	if access == "" {
@@ -413,6 +420,7 @@ func (m *ManagerIns) RemoveAccessToken(ctx context.Context, access string) error
 	return m.tokenStore.RemoveByAccess(ctx, access)
 }
 
+// impl interface Manager
 // RemoveRefreshToken use the refresh token to delete the token information
 func (m *ManagerIns) RemoveRefreshToken(ctx context.Context, refresh string) error {
 	if refresh == "" {
@@ -421,6 +429,7 @@ func (m *ManagerIns) RemoveRefreshToken(ctx context.Context, refresh string) err
 	return m.tokenStore.RemoveByRefresh(ctx, refresh)
 }
 
+// impl interface Manager
 // LoadAccessToken according to the access token for corresponding token information
 func (m *ManagerIns) LoadAccessToken(
 	ctx context.Context,
@@ -446,6 +455,7 @@ func (m *ManagerIns) LoadAccessToken(
 	return ti, nil
 }
 
+// impl interface Manager
 // LoadRefreshToken according to the refresh token for corresponding token information
 func (m *ManagerIns) LoadRefreshToken(
 	ctx context.Context,

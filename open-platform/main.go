@@ -2,14 +2,14 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 
-	"github.com/go-oauth2/oauth2/v4/generates"
+	"github.com/go-redis/redis/v8"
 
-	"github.com/go-oauth2/oauth2/v4/manage"
-	"github.com/go-oauth2/oauth2/v4/models"
-	"github.com/go-oauth2/oauth2/v4/server"
-	"github.com/go-oauth2/oauth2/v4/store"
+	"github.com/767829413/advanced-go/open-platform/config"
+	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/manage"
+	"github.com/767829413/advanced-go/open-platform/store"
 )
 
 var (
@@ -20,46 +20,44 @@ var (
 	portvar   int
 )
 
-func init() {
-	flag.BoolVar(&dumpvar, "d", true, "Dump requests and responses")
-	flag.StringVar(&idvar, "i", "222222", "The client id being passed in")
-	flag.StringVar(&secretvar, "s", "22222222", "The client secret being passed in")
-	flag.StringVar(&domainvar, "r", "http://localhost:9094", "The domain of the redirect url")
-	flag.IntVar(&portvar, "p", 9096, "the base port for the server")
-}
-
 func main() {
+	options := &redis.Options{
+		Addr:     "redis.rongke-base:6379",
+		Password: "",
+		DB:       1,
+	}
+	rdb := redis.NewClient(options)
 
-}
-
-func mainxcc() {
-	flag.Parse()
-	manager := manage.NewDefaultManager()
-	manager.SetAuthorizeCodeTokenCfg(manage.DefaultAuthorizeCodeTokenCfg)
-
-	// token store
-	manager.MustTokenStorage(store.NewMemoryTokenStore())
-
-	// generate jwt access token
-	// manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", []byte("00000000"), jwt.SigningMethodHS512))
+	manager := manage.NewManager(nil)
+	manager.SetAuthorizeCodeExp(config.DefaultCodeExp)
+	manager.SetAuthorizeCodeTokenCfg(config.DefaultAuthorizeCodeTokenCfg)
+	manager.SetImplicitTokenCfg(config.DefaultImplicitTokenCfg)
+	manager.SetPasswordTokenCfg(config.DefaultPasswordTokenCfg)
+	manager.SetClientTokenCfg(config.DefaultClientTokenCfg)
+	manager.SetRefreshTokenCfg(config.DefaultRefreshTokenCfg)
+	manager.MapAuthorizeGenerate(generates.NewAuthorizeGenerateIns())
 	manager.MapAccessGenerate(generates.NewAccessGenerate())
+	manager.MapTokenStorage(store.NewRedisStoreWithCli(rdb, "rongke-oauth2"))
 
-	clientStore := store.NewClientStore()
-	clientStore.Set(idvar, &models.Client{
-		ID:     idvar,
-		Secret: secretvar,
-		Domain: domainvar,
-	})
-	manager.MapClientStorage(clientStore)
+	cli := &generates.Client{
+		ID:     "123456",
+		Secret: "QAZWSXEDC",
+		Domain: "localhost",
+		Public: true,
+		UserID: "123456",
+	}
+	tr := &manage.TokenGenerateRequest{
+		ClientID:     cli.ID,
+		ClientSecret: cli.Secret,
+		UserID:       cli.UserID,
+	}
 
-	srv := server.NewServer(server.NewConfig(), manager)
-
-	srv.SetPasswordAuthorizationHandler(
-		func(ctx context.Context, clientID, username, password string) (userID string, err error) {
-			if username == "test" && password == "test" {
-				userID = "test"
-			}
-			return
-		},
+	info, err := manager.GenerateAuthToken(
+		context.Background(),
+		config.Token,
+		tr,
+		cli,
 	)
+
+	fmt.Println(info, err, info.GetAccess())
 }

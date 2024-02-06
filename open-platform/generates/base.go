@@ -2,13 +2,12 @@ package generates
 
 import (
 	"context"
+	"github.com/767829413/advanced-go/open-platform/config"
 	"net/http"
 	"time"
 )
 
 type (
-	// CodeChallengeMethod PCKE method
-	CodeChallengeMethod string
 
 	// GenerateBasic provide the basis of the generated token data
 	GenerateBasic struct {
@@ -33,6 +32,11 @@ type (
 		) (access, refresh string, err error)
 	}
 
+	// ClientPasswordVerifier the password handler interface
+	ClientPasswordVerifier interface {
+		VerifyPassword(string) bool
+	}
+
 	// TokenInfo the token information model interface
 	TokenInfo interface {
 		New() TokenInfo
@@ -54,8 +58,8 @@ type (
 		SetCodeExpiresIn(time.Duration)
 		GetCodeChallenge() string
 		SetCodeChallenge(string)
-		GetCodeChallengeMethod() CodeChallengeMethod
-		SetCodeChallengeMethod(CodeChallengeMethod)
+		GetCodeChallengeMethod() config.CodeChallengeMethod
+		SetCodeChallengeMethod(config.CodeChallengeMethod)
 
 		GetAccess() string
 		SetAccess(string)

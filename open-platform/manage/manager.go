@@ -4,151 +4,117 @@ import (
 	"context"
 	"time"
 
+	"github.com/767829413/advanced-go/open-platform/config"
 	"github.com/767829413/advanced-go/open-platform/errors"
 	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/store"
 )
 
-type Manager struct {
+type ManagerIns struct {
 	codeExp           time.Duration
-	gtcfg             map[GrantType]*Config
-	rcfg              *RefreshingConfig
+	gtcfg             map[config.GrantType]*config.Config
+	rcfg              *config.RefreshingConfig
 	authorizeGenerate generates.AuthorizeGenerate
 	accessGenerate    generates.AccessGenerate
+	tokenStore        store.TokenStore
+	validateURI       ValidateURIHandler
 }
 
 // NewManager create to authorization management instance
-func NewManager() *Manager {
-	return &Manager{
-		gtcfg: make(map[GrantType]*Config),
+func NewManager() Manager {
+	return &ManagerIns{
+		gtcfg:       make(map[config.GrantType]*config.Config),
+		validateURI: DefaultValidateURI,
 	}
 }
 
 // get grant type config
-func (m *Manager) grantConfig(gt GrantType) *Config {
+func (m *ManagerIns) grantConfig(gt config.GrantType) *config.Config {
 	if c, ok := m.gtcfg[gt]; ok && c != nil {
 		return c
 	}
 	switch gt {
-	case AuthorizationCode:
-		return DefaultAuthorizeCodeTokenCfg
-	case Implicit:
-		return DefaultImplicitTokenCfg
-	case PasswordCredentials:
-		return DefaultPasswordTokenCfg
-	case ClientCredentials:
-		return DefaultClientTokenCfg
+	case config.AuthorizationCode:
+		return config.DefaultAuthorizeCodeTokenCfg
+	case config.Implicit:
+		return config.DefaultImplicitTokenCfg
+	case config.PasswordCredentials:
+		return config.DefaultPasswordTokenCfg
+	case config.ClientCredentials:
+		return config.DefaultClientTokenCfg
 	}
-	return &Config{}
+	return &config.Config{}
 }
 
 // SetAuthorizeCodeExp set the authorization code expiration time
-func (m *Manager) SetAuthorizeCodeExp(exp time.Duration) {
+func (m *ManagerIns) SetAuthorizeCodeExp(exp time.Duration) {
 	m.codeExp = exp
 }
 
 // SetAuthorizeCodeTokenCfg set the authorization code grant token config
-func (m *Manager) SetAuthorizeCodeTokenCfg(cfg *Config) {
-	m.gtcfg[oauth2.AuthorizationCode] = cfg
+func (m *ManagerIns) SetAuthorizeCodeTokenCfg(cfg *config.Config) {
+	m.gtcfg[config.AuthorizationCode] = cfg
 }
 
 // SetImplicitTokenCfg set the implicit grant token config
-func (m *Manager) SetImplicitTokenCfg(cfg *Config) {
-	m.gtcfg[oauth2.Implicit] = cfg
+func (m *ManagerIns) SetImplicitTokenCfg(cfg *config.Config) {
+	m.gtcfg[config.Implicit] = cfg
 }
 
 // SetPasswordTokenCfg set the password grant token config
-func (m *Manager) SetPasswordTokenCfg(cfg *Config) {
-	m.gtcfg[oauth2.PasswordCredentials] = cfg
+func (m *ManagerIns) SetPasswordTokenCfg(cfg *config.Config) {
+	m.gtcfg[config.PasswordCredentials] = cfg
 }
 
 // SetClientTokenCfg set the client grant token config
-func (m *Manager) SetClientTokenCfg(cfg *Config) {
-	m.gtcfg[oauth2.ClientCredentials] = cfg
+func (m *ManagerIns) SetClientTokenCfg(cfg *config.Config) {
+	m.gtcfg[config.ClientCredentials] = cfg
 }
 
 // SetRefreshTokenCfg set the refreshing token config
-func (m *Manager) SetRefreshTokenCfg(cfg *RefreshingConfig) {
+func (m *ManagerIns) SetRefreshTokenCfg(cfg *config.RefreshingConfig) {
 	m.rcfg = cfg
 }
 
-// SetValidateURIHandler set the validates that RedirectURI is contained in baseURI
-func (m *Manager) SetValidateURIHandler(handler ValidateURIHandler) {
-	m.validateURI = handler
-}
-
 // MapAuthorizeGenerate mapping the authorize code generate interface
-func (m *Manager) MapAuthorizeGenerate(gen oauth2.AuthorizeGenerate) {
+func (m *ManagerIns) MapAuthorizeGenerate(gen generates.AuthorizeGenerate) {
 	m.authorizeGenerate = gen
 }
 
 // MapAccessGenerate mapping the access token generate interface
-func (m *Manager) MapAccessGenerate(gen oauth2.AccessGenerate) {
+func (m *ManagerIns) MapAccessGenerate(gen generates.AccessGenerate) {
 	m.accessGenerate = gen
 }
 
-// MapClientStorage mapping the client store interface
-func (m *Manager) MapClientStorage(stor oauth2.ClientStore) {
-	m.clientStore = stor
-}
-
-// MustClientStorage mandatory mapping the client store interface
-func (m *Manager) MustClientStorage(stor oauth2.ClientStore, err error) {
-	if err != nil {
-		panic(err.Error())
-	}
-	m.clientStore = stor
-}
-
 // MapTokenStorage mapping the token store interface
-func (m *Manager) MapTokenStorage(stor oauth2.TokenStore) {
+func (m *ManagerIns) MapTokenStorage(stor store.TokenStore) {
 	m.tokenStore = stor
 }
 
 // MustTokenStorage mandatory mapping the token store interface
-func (m *Manager) MustTokenStorage(stor oauth2.TokenStore, err error) {
+func (m *ManagerIns) MustTokenStorage(stor store.TokenStore, err error) {
 	if err != nil {
 		panic(err)
 	}
 	m.tokenStore = stor
 }
 
-// GetClient get the client information
-func (m *Manager) GetClient(
-	ctx context.Context,
-	clientID string,
-) (cli oauth2.ClientInfo, err error) {
-	cli, err = m.clientStore.GetByID(ctx, clientID)
-	if err != nil {
-		return
-	} else if cli == nil {
-		err = errors.ErrInvalidClient
-	}
-	return
-}
-
 // GenerateAuthToken generate the authorization token(code)
-func (m *Manager) GenerateAuthToken(
+func (m *ManagerIns) GenerateAuthToken(
 	ctx context.Context,
-	rt oauth2.ResponseType,
-	tgr *oauth2.TokenGenerateRequest,
-) (oauth2.TokenInfo, error) {
-	cli, err := m.GetClient(ctx, tgr.ClientID)
-	if err != nil {
-		return nil, err
-	} else if tgr.RedirectURI != "" {
-		if err := m.validateURI(cli.GetDomain(), tgr.RedirectURI); err != nil {
-			return nil, err
-		}
-	}
+	rt config.ResponseType,
+	tgr *TokenGenerateRequest,
+	cli generates.ClientInfo,
+) (generates.TokenInfo, error) {
 
-	ti := models.NewToken()
+	ti := generates.NewToken()
 	ti.SetClientID(tgr.ClientID)
 	ti.SetUserID(tgr.UserID)
 	ti.SetRedirectURI(tgr.RedirectURI)
 	ti.SetScope(tgr.Scope)
 
 	createAt := time.Now()
-	td := &oauth2.GenerateBasic{
+	td := &generates.GenerateBasic{
 		Client:    cli,
 		UserID:    tgr.UserID,
 		CreateAt:  createAt,
@@ -156,10 +122,10 @@ func (m *Manager) GenerateAuthToken(
 		Request:   tgr.Request,
 	}
 	switch rt {
-	case oauth2.Code:
+	case config.Code:
 		codeExp := m.codeExp
 		if codeExp == 0 {
-			codeExp = DefaultCodeExp
+			codeExp = config.DefaultCodeExp
 		}
 		ti.SetCodeCreateAt(createAt)
 		ti.SetCodeExpiresIn(codeExp)
@@ -176,9 +142,9 @@ func (m *Manager) GenerateAuthToken(
 			return nil, err
 		}
 		ti.SetCode(tv)
-	case oauth2.Token:
+	case config.Token:
 		// set access token expires
-		icfg := m.grantConfig(oauth2.Implicit)
+		icfg := m.grantConfig(config.Implicit)
 		aexp := icfg.AccessTokenExp
 		if exp := tgr.AccessTokenExp; exp > 0 {
 			aexp = exp
@@ -202,35 +168,38 @@ func (m *Manager) GenerateAuthToken(
 		}
 	}
 
-	err = m.tokenStore.Create(ctx, ti)
+	err := m.tokenStore.Create(ctx, ti)
 	if err != nil {
 		return nil, err
 	}
+
 	return ti, nil
 }
 
 // get authorization code data
-func (m *Manager) getAuthorizationCode(ctx context.Context, code string) (oauth2.TokenInfo, error) {
+func (m *ManagerIns) getAuthorizationCode(
+	ctx context.Context,
+	code string,
+) (generates.TokenInfo, error) {
 	ti, err := m.tokenStore.GetByCode(ctx, code)
 	if err != nil {
 		return nil, err
 	} else if ti == nil || ti.GetCode() != code || ti.GetCodeCreateAt().Add(ti.GetCodeExpiresIn()).Before(time.Now()) {
-		err = errors.ErrInvalidAuthorizeCode
 		return nil, errors.ErrInvalidAuthorizeCode
 	}
 	return ti, nil
 }
 
 // delete authorization code data
-func (m *Manager) delAuthorizationCode(ctx context.Context, code string) error {
+func (m *ManagerIns) delAuthorizationCode(ctx context.Context, code string) error {
 	return m.tokenStore.RemoveByCode(ctx, code)
 }
 
 // get and delete authorization code data
-func (m *Manager) getAndDelAuthorizationCode(
+func (m *ManagerIns) getAndDelAuthorizationCode(
 	ctx context.Context,
-	tgr *oauth2.TokenGenerateRequest,
-) (oauth2.TokenInfo, error) {
+	tgr *TokenGenerateRequest,
+) (generates.TokenInfo, error) {
 	code := tgr.Code
 	ti, err := m.getAuthorizationCode(ctx, code)
 	if err != nil {
@@ -248,7 +217,7 @@ func (m *Manager) getAndDelAuthorizationCode(
 	return ti, nil
 }
 
-func (m *Manager) validateCodeChallenge(ti oauth2.TokenInfo, ver string) error {
+func (m *ManagerIns) validateCodeChallenge(ti generates.TokenInfo, ver string) error {
 	cc := ti.GetCodeChallenge()
 	// early return
 	if cc == "" && ver == "" {
@@ -262,7 +231,7 @@ func (m *Manager) validateCodeChallenge(ti oauth2.TokenInfo, ver string) error {
 	}
 	ccm := ti.GetCodeChallengeMethod()
 	if ccm.String() == "" {
-		ccm = oauth2.CodeChallengePlain
+		ccm = config.CodeChallengePlain
 	}
 	if !ccm.Validate(cc, ver) {
 		return errors.ErrInvalidCodeChallenge
@@ -271,16 +240,13 @@ func (m *Manager) validateCodeChallenge(ti oauth2.TokenInfo, ver string) error {
 }
 
 // GenerateAccessToken generate the access token
-func (m *Manager) GenerateAccessToken(
+func (m *ManagerIns) GenerateAccessToken(
 	ctx context.Context,
-	gt oauth2.GrantType,
-	tgr *oauth2.TokenGenerateRequest,
-) (oauth2.TokenInfo, error) {
-	cli, err := m.GetClient(ctx, tgr.ClientID)
-	if err != nil {
-		return nil, err
-	}
-	if cliPass, ok := cli.(oauth2.ClientPasswordVerifier); ok {
+	gt config.GrantType,
+	tgr *TokenGenerateRequest,
+	cli generates.ClientInfo,
+) (generates.TokenInfo, error) {
+	if cliPass, ok := cli.(generates.ClientPasswordVerifier); ok {
 		if !cliPass.VerifyPassword(tgr.ClientSecret) {
 			return nil, errors.ErrInvalidClient
 		}
@@ -293,11 +259,11 @@ func (m *Manager) GenerateAccessToken(
 		}
 	}
 
-	if gt == oauth2.ClientCredentials && cli.IsPublic() == true {
+	if gt == config.ClientCredentials && cli.IsPublic() {
 		return nil, errors.ErrInvalidClient
 	}
 
-	if gt == oauth2.AuthorizationCode {
+	if gt == config.AuthorizationCode {
 		ti, err := m.getAndDelAuthorizationCode(ctx, tgr)
 		if err != nil {
 			return nil, err
@@ -312,7 +278,7 @@ func (m *Manager) GenerateAccessToken(
 		}
 	}
 
-	ti := models.NewToken()
+	ti := generates.NewToken()
 	ti.SetClientID(tgr.ClientID)
 	ti.SetUserID(tgr.UserID)
 	ti.SetRedirectURI(tgr.RedirectURI)
@@ -333,7 +299,7 @@ func (m *Manager) GenerateAccessToken(
 		ti.SetRefreshExpiresIn(gcfg.RefreshTokenExp)
 	}
 
-	td := &oauth2.GenerateBasic{
+	td := &generates.GenerateBasic{
 		Client:    cli,
 		UserID:    tgr.UserID,
 		CreateAt:  createAt,
@@ -360,23 +326,19 @@ func (m *Manager) GenerateAccessToken(
 }
 
 // RefreshAccessToken refreshing an access token
-func (m *Manager) RefreshAccessToken(
+func (m *ManagerIns) RefreshAccessToken(
 	ctx context.Context,
-	tgr *oauth2.TokenGenerateRequest,
-) (oauth2.TokenInfo, error) {
+	tgr *TokenGenerateRequest,
+	cli generates.ClientInfo,
+) (generates.TokenInfo, error) {
 	ti, err := m.LoadRefreshToken(ctx, tgr.Refresh)
-	if err != nil {
-		return nil, err
-	}
-
-	cli, err := m.GetClient(ctx, ti.GetClientID())
 	if err != nil {
 		return nil, err
 	}
 
 	oldAccess, oldRefresh := ti.GetAccess(), ti.GetRefresh()
 
-	td := &oauth2.GenerateBasic{
+	td := &generates.GenerateBasic{
 		Client:    cli,
 		UserID:    ti.GetUserID(),
 		CreateAt:  time.Now(),
@@ -384,7 +346,7 @@ func (m *Manager) RefreshAccessToken(
 		Request:   tgr.Request,
 	}
 
-	rcfg := DefaultRefreshTokenCfg
+	rcfg := config.DefaultRefreshTokenCfg
 	if v := m.rcfg; v != nil {
 		rcfg = v
 	}
@@ -416,11 +378,91 @@ func (m *Manager) RefreshAccessToken(
 		ti.SetRefresh(rv)
 	}
 
+	if err := m.tokenStore.Create(ctx, ti); err != nil {
+		return nil, err
+	}
+
+	if rcfg.IsRemoveAccess {
+		// remove the old access token
+		if err := m.tokenStore.RemoveByAccess(ctx, oldAccess); err != nil {
+			return nil, err
+		}
+	}
+
+	if rcfg.IsRemoveRefreshing && rv != "" {
+		// remove the old refresh token
+		if err := m.tokenStore.RemoveByRefresh(ctx, oldRefresh); err != nil {
+			return nil, err
+		}
+	}
+
 	if rv == "" {
 		ti.SetRefresh("")
 		ti.SetRefreshCreateAt(time.Now())
 		ti.SetRefreshExpiresIn(0)
 	}
 
+	return ti, nil
+}
+
+// RemoveAccessToken use the access token to delete the token information
+func (m *ManagerIns) RemoveAccessToken(ctx context.Context, access string) error {
+	if access == "" {
+		return errors.ErrInvalidAccessToken
+	}
+	return m.tokenStore.RemoveByAccess(ctx, access)
+}
+
+// RemoveRefreshToken use the refresh token to delete the token information
+func (m *ManagerIns) RemoveRefreshToken(ctx context.Context, refresh string) error {
+	if refresh == "" {
+		return errors.ErrInvalidAccessToken
+	}
+	return m.tokenStore.RemoveByRefresh(ctx, refresh)
+}
+
+// LoadAccessToken according to the access token for corresponding token information
+func (m *ManagerIns) LoadAccessToken(
+	ctx context.Context,
+	access string,
+) (generates.TokenInfo, error) {
+	if access == "" {
+		return nil, errors.ErrInvalidAccessToken
+	}
+
+	ct := time.Now()
+	ti, err := m.tokenStore.GetByAccess(ctx, access)
+	if err != nil {
+		return nil, err
+	} else if ti == nil || ti.GetAccess() != access {
+		return nil, errors.ErrInvalidAccessToken
+	} else if ti.GetRefresh() != "" && ti.GetRefreshExpiresIn() != 0 &&
+		ti.GetRefreshCreateAt().Add(ti.GetRefreshExpiresIn()).Before(ct) {
+		return nil, errors.ErrExpiredRefreshToken
+	} else if ti.GetAccessExpiresIn() != 0 &&
+		ti.GetAccessCreateAt().Add(ti.GetAccessExpiresIn()).Before(ct) {
+		return nil, errors.ErrExpiredAccessToken
+	}
+	return ti, nil
+}
+
+// LoadRefreshToken according to the refresh token for corresponding token information
+func (m *ManagerIns) LoadRefreshToken(
+	ctx context.Context,
+	refresh string,
+) (generates.TokenInfo, error) {
+	if refresh == "" {
+		return nil, errors.ErrInvalidRefreshToken
+	}
+
+	ti, err := m.tokenStore.GetByRefresh(ctx, refresh)
+	if err != nil {
+		return nil, err
+	} else if ti == nil || ti.GetRefresh() != refresh {
+		return nil, errors.ErrInvalidRefreshToken
+	} else if ti.GetRefreshExpiresIn() != 0 && // refresh token set to not expire
+		ti.GetRefreshCreateAt().Add(ti.GetRefreshExpiresIn()).Before(time.Now()) {
+		return nil, errors.ErrExpiredRefreshToken
+	}
 	return ti, nil
 }

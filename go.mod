@@ -6,8 +6,12 @@ require (
 	github.com/767829413/tmp-exec v0.0.0-20231219093537-2f427def6e46
 	github.com/go-kratos/kratos/v2 v2.7.2
 	github.com/go-oauth2/oauth2/v4 v4.5.2
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/go-session/session v3.1.2+incompatible
+	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/google/uuid v1.5.0
+	github.com/json-iterator/go v1.1.12
 	github.com/prometheus-community/pro-bing v0.3.0
 	github.com/spf13/pflag v1.0.5
 	github.com/streadway/amqp v1.1.0
@@ -26,18 +30,20 @@ require (
 
 require (
 	github.com/benbjohnson/clock v1.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-kratos/aegis v0.2.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/form/v4 v4.2.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/tidwall/buntdb v1.3.0 // indirect

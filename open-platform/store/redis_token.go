@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
-	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/models"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
@@ -123,7 +123,7 @@ func (s *TokenStoreRedis) removeToken(
 	return nil
 }
 
-func (s *TokenStoreRedis) parseToken(result *redis.StringCmd) (generates.TokenInfo, error) {
+func (s *TokenStoreRedis) parseToken(result *redis.StringCmd) (models.TokenInfo, error) {
 	if ok, err := s.checkError(result); err != nil {
 		return nil, err
 	} else if ok {
@@ -138,14 +138,14 @@ func (s *TokenStoreRedis) parseToken(result *redis.StringCmd) (generates.TokenIn
 		return nil, err
 	}
 
-	var token generates.Token
+	var token models.Token
 	if err := jsonUnmarshal(buf, &token); err != nil {
 		return nil, err
 	}
 	return &token, nil
 }
 
-func (s *TokenStoreRedis) getToken(ctx context.Context, key string) (generates.TokenInfo, error) {
+func (s *TokenStoreRedis) getToken(ctx context.Context, key string) (models.TokenInfo, error) {
 	result := s.cli.Get(ctx, s.wrapperKey(key))
 	return s.parseToken(result)
 }
@@ -165,7 +165,7 @@ func (s *TokenStoreRedis) getBasicID(ctx context.Context, token string) (string,
 }
 
 // Create Create and store the new token information
-func (s *TokenStoreRedis) Create(ctx context.Context, info generates.TokenInfo) error {
+func (s *TokenStoreRedis) Create(ctx context.Context, info models.TokenInfo) error {
 	ct := time.Now()
 	jv, err := jsonMarshal(info)
 	if err != nil {
@@ -214,7 +214,7 @@ func (s *TokenStoreRedis) RemoveByRefresh(ctx context.Context, refresh string) e
 }
 
 // GetByCode Use the authorization code for token information data
-func (s *TokenStoreRedis) GetByCode(ctx context.Context, code string) (generates.TokenInfo, error) {
+func (s *TokenStoreRedis) GetByCode(ctx context.Context, code string) (models.TokenInfo, error) {
 	return s.getToken(ctx, code)
 }
 
@@ -222,7 +222,7 @@ func (s *TokenStoreRedis) GetByCode(ctx context.Context, code string) (generates
 func (s *TokenStoreRedis) GetByAccess(
 	ctx context.Context,
 	access string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	basicID, err := s.getBasicID(ctx, access)
 	if err != nil || basicID == "" {
 		return nil, err
@@ -234,7 +234,7 @@ func (s *TokenStoreRedis) GetByAccess(
 func (s *TokenStoreRedis) GetByRefresh(
 	ctx context.Context,
 	refresh string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	basicID, err := s.getBasicID(ctx, refresh)
 	if err != nil || basicID == "" {
 		return nil, err

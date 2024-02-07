@@ -1,4 +1,4 @@
-package generates
+package models
 
 import (
 	"github.com/767829413/advanced-go/open-platform/config"

@@ -9,6 +9,7 @@ import (
 	"github.com/767829413/advanced-go/open-platform/config"
 	"github.com/767829413/advanced-go/open-platform/generates"
 	"github.com/767829413/advanced-go/open-platform/manage"
+	"github.com/767829413/advanced-go/open-platform/models"
 	"github.com/767829413/advanced-go/open-platform/store"
 )
 
@@ -39,7 +40,7 @@ func main() {
 	manager.MapAccessGenerate(generates.NewAccessGenerate())
 	manager.MapTokenStorage(store.NewRedisStoreWithCli(rdb, "rongke-oauth2"))
 
-	cli := &generates.Client{
+	cli := &models.Client{
 		ID:     "123456",
 		Secret: "QAZWSXEDC",
 		Domain: "localhost",
@@ -56,7 +57,6 @@ func main() {
 		context.Background(),
 		config.Token,
 		tr,
-		cli,
 	)
 
 	fmt.Println(info, err, info.GetAccess())

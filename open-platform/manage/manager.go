@@ -7,6 +7,7 @@ import (
 	"github.com/767829413/advanced-go/open-platform/config"
 	"github.com/767829413/advanced-go/open-platform/errors"
 	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/models"
 	"github.com/767829413/advanced-go/open-platform/store"
 )
 
@@ -17,7 +18,18 @@ type ManagerIns struct {
 	authorizeGenerate generates.AuthorizeGenerate
 	accessGenerate    generates.AccessGenerate
 	tokenStore        store.TokenStore
+	clientStore       store.ClientStore
 	validateURI       ValidateURIHandler
+}
+
+// NewDefaultManager create to default authorization management instance
+func NewDefaultManager() *ManagerIns {
+	m := NewManager(nil)
+	// default implementation
+	m.MapAuthorizeGenerate(generates.NewAuthorizeGenerateIns())
+	m.MapAccessGenerate(generates.NewAccessGenerate())
+
+	return m
 }
 
 // NewManager create to authorization management instance
@@ -89,6 +101,19 @@ func (m *ManagerIns) MapAccessGenerate(gen generates.AccessGenerate) {
 	m.accessGenerate = gen
 }
 
+// MapClientStorage mapping the client store interface
+func (m *ManagerIns) MapClientStorage(stor store.ClientStore) {
+	m.clientStore = stor
+}
+
+// MustClientStorage mandatory mapping the client store interface
+func (m *ManagerIns) MustClientStorage(stor store.ClientStore, err error) {
+	if err != nil {
+		panic(err.Error())
+	}
+	m.clientStore = stor
+}
+
 // MapTokenStorage mapping the token store interface
 func (m *ManagerIns) MapTokenStorage(stor store.TokenStore) {
 	m.tokenStore = stor
@@ -106,7 +131,7 @@ func (m *ManagerIns) MustTokenStorage(stor store.TokenStore, err error) {
 func (m *ManagerIns) getAuthorizationCode(
 	ctx context.Context,
 	code string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	ti, err := m.tokenStore.GetByCode(ctx, code)
 	if err != nil {
 		return nil, err
@@ -125,7 +150,7 @@ func (m *ManagerIns) delAuthorizationCode(ctx context.Context, code string) erro
 func (m *ManagerIns) getAndDelAuthorizationCode(
 	ctx context.Context,
 	tgr *TokenGenerateRequest,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	code := tgr.Code
 	ti, err := m.getAuthorizationCode(ctx, code)
 	if err != nil {
@@ -143,7 +168,7 @@ func (m *ManagerIns) getAndDelAuthorizationCode(
 	return ti, nil
 }
 
-func (m *ManagerIns) validateCodeChallenge(ti generates.TokenInfo, ver string) error {
+func (m *ManagerIns) validateCodeChallenge(ti models.TokenInfo, ver string) error {
 	cc := ti.GetCodeChallenge()
 	// early return
 	if cc == "" && ver == "" {
@@ -166,15 +191,38 @@ func (m *ManagerIns) validateCodeChallenge(ti generates.TokenInfo, ver string) e
 }
 
 // impl interface Manager
+// GetClient get the client information
+func (m *ManagerIns) GetClient(
+	ctx context.Context,
+	clientID string,
+) (cli models.ClientInfo, err error) {
+	cli, err = m.clientStore.GetByID(ctx, clientID)
+	if err != nil {
+		return
+	} else if cli == nil {
+		err = errors.ErrInvalidClient
+	}
+	return
+}
+
+// impl interface Manager
 // GenerateAuthToken generate the authorization token(code)
 func (m *ManagerIns) GenerateAuthToken(
 	ctx context.Context,
 	rt config.ResponseType,
 	tgr *TokenGenerateRequest,
-	cli generates.ClientInfo,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 
-	ti := generates.NewToken()
+	cli, err := m.GetClient(ctx, tgr.ClientID)
+	if err != nil {
+		return nil, err
+	} else if tgr.RedirectURI != "" {
+		if err := m.validateURI(cli.GetDomain(), tgr.RedirectURI); err != nil {
+			return nil, err
+		}
+	}
+
+	ti := models.NewToken()
 	ti.SetClientID(tgr.ClientID)
 	ti.SetUserID(tgr.UserID)
 	ti.SetRedirectURI(tgr.RedirectURI)
@@ -235,7 +283,7 @@ func (m *ManagerIns) GenerateAuthToken(
 		}
 	}
 
-	err := m.tokenStore.Create(ctx, ti)
+	err = m.tokenStore.Create(ctx, ti)
 	if err != nil {
 		return nil, err
 	}
@@ -249,9 +297,13 @@ func (m *ManagerIns) GenerateAccessToken(
 	ctx context.Context,
 	gt config.GrantType,
 	tgr *TokenGenerateRequest,
-	cli generates.ClientInfo,
-) (generates.TokenInfo, error) {
-	if cliPass, ok := cli.(generates.ClientPasswordVerifier); ok {
+) (models.TokenInfo, error) {
+	cli, err := m.GetClient(ctx, tgr.ClientID)
+	if err != nil {
+		return nil, err
+	}
+
+	if cliPass, ok := cli.(models.ClientPasswordVerifier); ok {
 		if !cliPass.VerifyPassword(tgr.ClientSecret) {
 			return nil, errors.ErrInvalidClient
 		}
@@ -283,7 +335,7 @@ func (m *ManagerIns) GenerateAccessToken(
 		}
 	}
 
-	ti := generates.NewToken()
+	ti := models.NewToken()
 	ti.SetClientID(tgr.ClientID)
 	ti.SetUserID(tgr.UserID)
 	ti.SetRedirectURI(tgr.RedirectURI)
@@ -335,9 +387,13 @@ func (m *ManagerIns) GenerateAccessToken(
 func (m *ManagerIns) RefreshAccessToken(
 	ctx context.Context,
 	tgr *TokenGenerateRequest,
-	cli generates.ClientInfo,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	ti, err := m.LoadRefreshToken(ctx, tgr.Refresh)
+	if err != nil {
+		return nil, err
+	}
+
+	cli, err := m.GetClient(ctx, ti.GetClientID())
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +490,7 @@ func (m *ManagerIns) RemoveRefreshToken(ctx context.Context, refresh string) err
 func (m *ManagerIns) LoadAccessToken(
 	ctx context.Context,
 	access string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	if access == "" {
 		return nil, errors.ErrInvalidAccessToken
 	}
@@ -460,7 +516,7 @@ func (m *ManagerIns) LoadAccessToken(
 func (m *ManagerIns) LoadRefreshToken(
 	ctx context.Context,
 	refresh string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	if refresh == "" {
 		return nil, errors.ErrInvalidRefreshToken
 	}

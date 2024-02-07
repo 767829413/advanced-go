@@ -3,16 +3,21 @@ package util
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	mrand "math/rand"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"unsafe"
@@ -227,4 +232,36 @@ func increment(ip net.IP) {
 			break
 		}
 	}
+}
+
+func EncryptUrlValue(urlparams url.Values, appkey string) (string, error) {
+	params := make(map[string]string)
+	for k, v := range urlparams {
+		params[k] = v[0]
+	}
+	return Encrypt(params, appkey)
+}
+
+func Encrypt(params map[string]string, appkey string) (string, error) {
+	if len(appkey) == 0 {
+		return "", errors.New("miss appkey")
+	}
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	keyValues := []string{}
+	for _, k := range keys {
+		if k == "signature" || len(k) == 0 {
+			continue
+		}
+		keyValues = append(keyValues, k+"="+params[k])
+	}
+	var p = strings.Join(keyValues, "&")
+	mac := hmac.New(sha1.New, []byte(appkey))
+	mac.Write([]byte(p))
+	var signature = fmt.Sprintf("%X", mac.Sum(nil))
+	return signature, nil
 }

@@ -1,35 +1,19 @@
-package generates
+package models
 
 import (
-	"context"
-	"github.com/767829413/advanced-go/open-platform/config"
-	"net/http"
 	"time"
+
+	"github.com/767829413/advanced-go/open-platform/config"
 )
 
 type (
-
-	// GenerateBasic provide the basis of the generated token data
-	GenerateBasic struct {
-		Client    ClientInfo
-		UserID    string
-		CreateAt  time.Time
-		TokenInfo TokenInfo
-		Request   *http.Request
-	}
-
-	// AuthorizeGenerate generate the authorization code interface
-	AuthorizeGenerate interface {
-		Token(ctx context.Context, data *GenerateBasic) (code string, err error)
-	}
-
-	// AccessGenerate generate the access and refresh tokens interface
-	AccessGenerate interface {
-		Token(
-			ctx context.Context,
-			data *GenerateBasic,
-			isGenRefresh bool,
-		) (access, refresh string, err error)
+	// ClientInfo the client information model interface
+	ClientInfo interface {
+		GetID() string
+		GetSecret() string
+		GetDomain() string
+		IsPublic() bool
+		GetUserID() string
 	}
 
 	// ClientPasswordVerifier the password handler interface
@@ -74,14 +58,5 @@ type (
 		SetRefreshCreateAt(time.Time)
 		GetRefreshExpiresIn() time.Duration
 		SetRefreshExpiresIn(time.Duration)
-	}
-
-	// ClientInfo the client information model interface
-	ClientInfo interface {
-		GetID() string
-		GetSecret() string
-		GetDomain() string
-		IsPublic() bool
-		GetUserID() string
 	}
 )

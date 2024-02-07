@@ -3,7 +3,7 @@ package manage
 import (
 	"context"
 	"github.com/767829413/advanced-go/open-platform/config"
-	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/models"
 	"net/http"
 	"time"
 )
@@ -27,28 +27,28 @@ type TokenGenerateRequest struct {
 // Manager authorization management interface
 type Manager interface {
 
+	// get the client information
+	GetClient(ctx context.Context, clientID string) (cli models.ClientInfo, err error)
+
 	// generate the authorization token(code)
 	GenerateAuthToken(
 		ctx context.Context,
 		rt config.ResponseType,
 		tgr *TokenGenerateRequest,
-		cli generates.ClientInfo,
-	) (authToken generates.TokenInfo, err error)
+	) (authToken models.TokenInfo, err error)
 
 	// generate the access token
 	GenerateAccessToken(
 		ctx context.Context,
 		gt config.GrantType,
 		tgr *TokenGenerateRequest,
-		cli generates.ClientInfo,
-	) (accessToken generates.TokenInfo, err error)
+	) (accessToken models.TokenInfo, err error)
 
 	// refreshing an access token
 	RefreshAccessToken(
 		ctx context.Context,
 		tgr *TokenGenerateRequest,
-		cli generates.ClientInfo,
-	) (accessToken generates.TokenInfo, err error)
+	) (accessToken models.TokenInfo, err error)
 
 	// use the access token to delete the token information
 	RemoveAccessToken(ctx context.Context, access string) (err error)
@@ -57,8 +57,8 @@ type Manager interface {
 	RemoveRefreshToken(ctx context.Context, refresh string) (err error)
 
 	// according to the access token for corresponding token information
-	LoadAccessToken(ctx context.Context, access string) (ti generates.TokenInfo, err error)
+	LoadAccessToken(ctx context.Context, access string) (ti models.TokenInfo, err error)
 
 	// according to the refresh token for corresponding token information
-	LoadRefreshToken(ctx context.Context, refresh string) (ti generates.TokenInfo, err error)
+	LoadRefreshToken(ctx context.Context, refresh string) (ti models.TokenInfo, err error)
 }

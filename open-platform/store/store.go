@@ -3,20 +3,20 @@ package store
 import (
 	"context"
 
-	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/models"
 )
 
 type (
 	// ClientStore the client information storage interface
 	ClientStore interface {
 		// according to the ID for the client information
-		GetByID(ctx context.Context, id string) (generates.ClientInfo, error)
+		GetByID(ctx context.Context, id string) (models.ClientInfo, error)
 	}
 
 	// TokenStore the token information storage interface
 	TokenStore interface {
 		// create and store the new token information
-		Create(ctx context.Context, info generates.TokenInfo) error
+		Create(ctx context.Context, info models.TokenInfo) error
 
 		// delete the authorization code
 		RemoveByCode(ctx context.Context, code string) error
@@ -28,12 +28,12 @@ type (
 		RemoveByRefresh(ctx context.Context, refresh string) error
 
 		// use the authorization code for token information data
-		GetByCode(ctx context.Context, code string) (generates.TokenInfo, error)
+		GetByCode(ctx context.Context, code string) (models.TokenInfo, error)
 
 		// use the access token for token information data
-		GetByAccess(ctx context.Context, access string) (generates.TokenInfo, error)
+		GetByAccess(ctx context.Context, access string) (models.TokenInfo, error)
 
 		// use the refresh token for token information data
-		GetByRefresh(ctx context.Context, refresh string) (generates.TokenInfo, error)
+		GetByRefresh(ctx context.Context, refresh string) (models.TokenInfo, error)
 	}
 )

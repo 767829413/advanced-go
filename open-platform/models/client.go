@@ -1,4 +1,4 @@
-package generates
+package models
 
 // Client client model
 type Client struct {

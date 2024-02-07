@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/767829413/advanced-go/open-platform/generates"
+	"github.com/767829413/advanced-go/open-platform/models"
 	jsoniter "github.com/json-iterator/go"
 	"gorm.io/gorm"
 )
@@ -82,7 +82,7 @@ func (s *TokenStoreMysql) errorf(format string, args ...interface{}) {
 }
 
 // Create create and store the new token information
-func (s *TokenStoreMysql) Create(ctx context.Context, info generates.TokenInfo) error {
+func (s *TokenStoreMysql) Create(ctx context.Context, info models.TokenInfo) error {
 	buf, _ := jsoniter.Marshal(info)
 	item := &StoreItem{
 		Data: string(buf),
@@ -122,14 +122,14 @@ func (s *TokenStoreMysql) RemoveByRefresh(ctx context.Context, refresh string) e
 	return err
 }
 
-func (s *TokenStoreMysql) toTokenInfo(data string) generates.TokenInfo {
-	var tm generates.Token
+func (s *TokenStoreMysql) toTokenInfo(data string) models.TokenInfo {
+	var tm models.Token
 	_ = jsoniter.Unmarshal([]byte(data), &tm)
 	return &tm
 }
 
 // GetByCode use the authorization code for token information data
-func (s *TokenStoreMysql) GetByCode(ctx context.Context, code string) (generates.TokenInfo, error) {
+func (s *TokenStoreMysql) GetByCode(ctx context.Context, code string) (models.TokenInfo, error) {
 	if code == "" {
 		return nil, nil
 	}
@@ -150,7 +150,7 @@ func (s *TokenStoreMysql) GetByCode(ctx context.Context, code string) (generates
 func (s *TokenStoreMysql) GetByAccess(
 	ctx context.Context,
 	access string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	if access == "" {
 		return nil, nil
 	}
@@ -171,7 +171,7 @@ func (s *TokenStoreMysql) GetByAccess(
 func (s *TokenStoreMysql) GetByRefresh(
 	ctx context.Context,
 	refresh string,
-) (generates.TokenInfo, error) {
+) (models.TokenInfo, error) {
 	if refresh == "" {
 		return nil, nil
 	}

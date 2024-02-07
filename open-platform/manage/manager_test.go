@@ -125,7 +125,7 @@ func testManager(tgr *manage.TokenGenerateRequest, manager manage.Manager) {
 
 func testZeroAccessExpirationManager(tgr *manage.TokenGenerateRequest, manager manage.Manager) {
 	ctx := context.Background()
-	conf := config.Config{
+	conf := config.TokenExpConf{
 		AccessTokenExp:    0, // Set explicitly as we're testing 0 (no) expiration
 		IsGenerateRefresh: true,
 	}
@@ -164,7 +164,7 @@ func testCannotRequestZeroExpirationAccessTokens(
 	manager manage.Manager,
 ) {
 	ctx := context.Background()
-	conf := config.Config{
+	conf := config.TokenExpConf{
 		AccessTokenExp: time.Hour * 5,
 	}
 	m, ok := manager.(*manage.ManagerIns)
@@ -194,7 +194,7 @@ func testCannotRequestZeroExpirationAccessTokens(
 
 func testZeroRefreshExpirationManager(tgr *manage.TokenGenerateRequest, manager manage.Manager) {
 	ctx := context.Background()
-	conf := config.Config{
+	conf := config.TokenExpConf{
 		RefreshTokenExp:   0, // Set explicitly as we're testing 0 (no) expiration
 		IsGenerateRefresh: true,
 	}

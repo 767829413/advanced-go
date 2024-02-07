@@ -17,20 +17,3 @@ var (
 	ErrMissingCodeChallenge = errors.New("missing code challenge")
 	ErrInvalidCodeChallenge = errors.New("invalid code challenge")
 )
-
-// https://tools.ietf.org/html/rfc6749#section-5.2
-var (
-	ErrInvalidRequest                 = errors.New("invalid_request")
-	ErrUnauthorizedClient             = errors.New("unauthorized_client")
-	ErrAccessDenied                   = errors.New("access_denied")
-	ErrUnsupportedResponseType        = errors.New("unsupported_response_type")
-	ErrInvalidScope                   = errors.New("invalid_scope")
-	ErrServerError                    = errors.New("server_error")
-	ErrTemporarilyUnavailable         = errors.New("temporarily_unavailable")
-	ErrInvalidClient                  = errors.New("invalid_client")
-	ErrInvalidGrant                   = errors.New("invalid_grant")
-	ErrUnsupportedGrantType           = errors.New("unsupported_grant_type")
-	ErrCodeChallengeRquired           = errors.New("invalid_request")
-	ErrUnsupportedCodeChallengeMethod = errors.New("invalid_request")
-	ErrInvalidCodeChallengeLen        = errors.New("invalid_request")
-)

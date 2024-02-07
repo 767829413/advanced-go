@@ -13,7 +13,7 @@ import (
 
 type ManagerIns struct {
 	codeExp           time.Duration
-	gtcfg             map[config.GrantType]*config.Config
+	gtcfg             map[config.GrantType]*config.TokenExpConf
 	rcfg              *config.RefreshingConfig
 	authorizeGenerate generates.AuthorizeGenerate
 	accessGenerate    generates.AccessGenerate
@@ -38,13 +38,13 @@ func NewManager(validateURI ValidateURIHandler) *ManagerIns {
 		validateURI = DefaultValidateURI
 	}
 	return &ManagerIns{
-		gtcfg:       make(map[config.GrantType]*config.Config),
+		gtcfg:       make(map[config.GrantType]*config.TokenExpConf),
 		validateURI: validateURI,
 	}
 }
 
 // get grant type config
-func (m *ManagerIns) grantConfig(gt config.GrantType) *config.Config {
+func (m *ManagerIns) grantConfig(gt config.GrantType) *config.TokenExpConf {
 	if c, ok := m.gtcfg[gt]; ok && c != nil {
 		return c
 	}
@@ -58,7 +58,7 @@ func (m *ManagerIns) grantConfig(gt config.GrantType) *config.Config {
 	case config.ClientCredentials:
 		return config.DefaultClientTokenCfg
 	}
-	return &config.Config{}
+	return &config.TokenExpConf{}
 }
 
 // SetAuthorizeCodeExp set the authorization code expiration time
@@ -67,22 +67,22 @@ func (m *ManagerIns) SetAuthorizeCodeExp(exp time.Duration) {
 }
 
 // SetAuthorizeCodeTokenCfg set the authorization code grant token config
-func (m *ManagerIns) SetAuthorizeCodeTokenCfg(cfg *config.Config) {
+func (m *ManagerIns) SetAuthorizeCodeTokenCfg(cfg *config.TokenExpConf) {
 	m.gtcfg[config.AuthorizationCode] = cfg
 }
 
 // SetImplicitTokenCfg set the implicit grant token config
-func (m *ManagerIns) SetImplicitTokenCfg(cfg *config.Config) {
+func (m *ManagerIns) SetImplicitTokenCfg(cfg *config.TokenExpConf) {
 	m.gtcfg[config.Implicit] = cfg
 }
 
 // SetPasswordTokenCfg set the password grant token config
-func (m *ManagerIns) SetPasswordTokenCfg(cfg *config.Config) {
+func (m *ManagerIns) SetPasswordTokenCfg(cfg *config.TokenExpConf) {
 	m.gtcfg[config.PasswordCredentials] = cfg
 }
 
 // SetClientTokenCfg set the client grant token config
-func (m *ManagerIns) SetClientTokenCfg(cfg *config.Config) {
+func (m *ManagerIns) SetClientTokenCfg(cfg *config.TokenExpConf) {
 	m.gtcfg[config.ClientCredentials] = cfg
 }
 

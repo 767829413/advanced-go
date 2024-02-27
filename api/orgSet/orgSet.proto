@@ -12,51 +12,19 @@ message GetOrgConfRequest {
 
 message SetOrgConfRequest {
 	int64 orgId = 1;
-	int32 portalLoginRequired = 2;
-	int32 classScheduleCreateBoard = 3;
-	int32 scheduleCreateLiveclass = 4;
-	int32 scheduleCreateLiveclassType = 5;
-	int32 handDeviceSupport = 6;
-	int32 scheduleDisplayAll = 7;
-
+	map<string,bytes> values = 2;
 } 
-
-message Stage {
-	int64 id = 1;
-	string name = 2;
-	int32 years = 3;
-	repeated string gradeName = 4;
-	int32 state = 5;
-	int32 isDefault = 6;
-
-}
-
-message ScreenSet {
-	repeated int32 value = 1;
-}
-
-message Stream {
-	repeated ScreenSet screenSet = 1;
-}
-
-message StreamInfo {
-	repeated Stream deskStream = 1;
-	repeated Stream bigHeadStream = 2;
-	repeated Stream smallHeadStream = 3;
-	int32 headFps = 4;
-	int32 deskFps = 5;
-}
 
 message GetOrgConfResponse {
 	string shortName = 1;
 	int32 schoolYear = 2;
-	repeated Stage stageList = 3;
+	bytes stageList = 3;
 	string portalLogoUrl = 4;
 	string managementName = 5;
 	string managementLogoUrl = 6;
-	StreamInfo streamInfo = 7;
+	bytes streamInfo = 7;
 	int32 teachGroupShowType = 8;
-	repeated int32 teachActivityFunc = 9;
+	bytes teachActivityFunc = 9;
 	int32 handDeviceSupport = 10;
 	int32 portalLoginRequired = 11;
 	int32 classScheduleCreateBoard = 12;
@@ -64,6 +32,8 @@ message GetOrgConfResponse {
 	map<string, bool> clientModule = 14;
 	int32 scheduleCreateLiveclass = 15;
 	int32 scheduleCreateLiveclassType = 16;
+	string orgName = 17;
+	int64 levelTypeId = 18;
 }
 
 message SetOrgConfResponse {

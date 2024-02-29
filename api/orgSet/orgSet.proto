@@ -12,7 +12,22 @@ message GetOrgConfRequest {
 
 message SetOrgConfRequest {
 	int64 orgId = 1;
-	map<string,bytes> values = 2;
+	string desk_stream = 2;                    
+	string big_head_stream = 3;                      
+	string small_head_stream = 4;                       
+	int32 teach_group_show_type = 5;                       
+	string teach_activity_func = 6;                      
+	int32 desk_fps = 7;                         
+	int32 head_fps = 8;                         
+	int64 p_storage_cap = 9;                       
+	int32 enable_obs_ws = 10;                       
+	string yxt_video_rate = 11;                      
+	int32 hand_device_support = 12;                      
+	int32 portal_login_required = 13;                    
+	int32 class_schedule_create_board = 14;              
+	int32 schedule_display_all = 15;                     
+	int32 schedule_create_liveclass = 16;                
+	int32 schedule_create_liveclass_type = 17;  
 } 
 
 message GetOrgConfResponse {

@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 package mping
 
 import (
@@ -417,7 +420,16 @@ func printStat() error {
 				// 根据是否进行 bitflip 检查，打印不同的信息
 				if *bitflipCheck {
 					if tr.received == 0 {
-						log.Printf("[%s] %s: sent:%d, recv:%d, loss rate: %.2f%%, latency: %v, bitflip: %d\n", logLevel, target, total, tr.received, lossRate*100, 0, tr.bitflipCount)
+						log.Printf(
+							"[%s] %s: sent:%d, recv:%d, loss rate: %.2f%%, latency: %v, bitflip: %d\n",
+							logLevel,
+							target,
+							total,
+							tr.received,
+							lossRate*100,
+							0,
+							tr.bitflipCount,
+						)
 					} else {
 						log.Printf("[%s] %s: sent:%d, recv:%d,  loss rate: %.2f%%, latency: %v, bitflip: %d\n", logLevel, target, total, tr.received, lossRate*100, time.Duration(tr.latency/int64(tr.received)), tr.bitflipCount)
 					}
@@ -470,7 +482,12 @@ func getTsFromOOB(oob []byte, oobn int) (int64, error) {
 func getTxTs(socketFd int) (int64, error) {
 	pktBuf := make([]byte, 1024)
 	oob := make([]byte, 1024)
-	_, oobn, _, _, err := syscall.Recvmsg(socketFd, pktBuf, oob, syscall.MSG_ERRQUEUE|syscall.MSG_DONTWAIT)
+	_, oobn, _, _, err := syscall.Recvmsg(
+		socketFd,
+		pktBuf,
+		oob,
+		syscall.MSG_ERRQUEUE|syscall.MSG_DONTWAIT,
+	)
 	if err != nil {
 		return 0, err
 	}

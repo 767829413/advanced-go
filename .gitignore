@@ -3,3 +3,4 @@ tmp
 config/conf
 sql
 ./main.go
+websocket-plaso

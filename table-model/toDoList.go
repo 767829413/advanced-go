@@ -1,4 +1,4 @@
-package tablemodel
+package tableModel
 
 import "gorm.io/plugin/soft_delete"
 

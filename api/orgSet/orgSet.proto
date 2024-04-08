@@ -1,6 +1,8 @@
 syntax = "proto3";
 package api.orgSet;
 
+import "google/api/annotations.proto";
+
 option go_package = "api/orgSet;orgSet";
 option java_multiple_files = true;
 option java_package = "api.orgSet";
@@ -58,7 +60,19 @@ message SetOrgConfResponse {
 
 service OrgConf {
 	// 获取后台配置
-	rpc GetOrgConf (GetOrgConfRequest) returns (GetOrgConfResponse);
+	rpc GetOrgConf (GetOrgConfRequest) returns (GetOrgConfResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/GetOrgConf",
+			body: "*",
+		};
+	}
 	// 设置后台配置
-	rpc SetOrgConf (SetOrgConfRequest) returns (SetOrgConfResponse);
+	rpc SetOrgConf (SetOrgConfRequest) returns (SetOrgConfResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/SetOrgConfRequest",
+			body: "*",
+		};
+	}
 }

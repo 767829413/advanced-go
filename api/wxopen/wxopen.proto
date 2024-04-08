@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package api.wxopen;
+
+import "google/api/annotations.proto";
+
+option go_package = "api/wxopen;wxopen";
+option java_multiple_files = true;
+option java_package = "api.wxopen";
+
+message GetAccessTokenRequest {
+  string app_id = 1;
+  string app_secret = 2;
+}
+
+message GetAccessTokenResponse {
+  string access_token = 1;
+  int64 expires_in = 2;
+}
+
+message LoginQrCodeCreateRequest {
+  int64 expire_seconds = 1;
+  string scene_str = 2;
+}
+
+message LoginQrCodeCreateResponse {
+  string ticket = 1;
+  int64 expire_seconds = 2;
+  string url = 3;
+}
+
+message GetWxUserInfoByCodeRequest {
+  string code = 1;
+}
+
+message GetWxUserInfoByCodeResponse {
+  string openid = 1;
+  string nickname = 2;
+  string headimgurl = 3;
+}
+
+message LoginUrlCreateRequest {
+  string queryString = 1;
+}
+
+message LoginUrlCreateResponse {
+  string url = 1;
+  string state = 2;
+  string appId = 3;
+}
+
+service Wxopen {
+  rpc GetAccessToken(GetAccessTokenRequest) returns (GetAccessTokenResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/GetAccessToken",
+			body: "*",
+		};
+	}
+  rpc LoginQrCodeCreate(LoginQrCodeCreateRequest) returns (LoginQrCodeCreateResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/LoginQrCodeCreate",
+			body: "*",
+		};
+	}
+  rpc GetWxUserInfoByCode(GetWxUserInfoByCodeRequest) returns (GetWxUserInfoByCodeResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/GetWxUserInfoByCode",
+			body: "*",
+		};
+	}
+  rpc LoginUrlCreate(LoginUrlCreateRequest) returns (LoginUrlCreateResponse)  {
+		option (google.api.http) = {
+			// 定义一个 POST 接口，并且把 body 映射到入参
+			post: "/LoginUrlCreate",
+			body: "*",
+		};
+	}
+}

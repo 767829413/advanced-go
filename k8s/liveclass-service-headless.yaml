@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    ingress.kubernetes.io/service-upstream: "true"
+  labels:
+    app: liveclass-service
+  name: liveclass-service-headless
+  namespace: rongke-dev-s
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 81
+    protocol: TCP
+    targetPort: 81
+  selector:
+    app: liveclass-service
+  type: ClusterIP

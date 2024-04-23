@@ -265,3 +265,34 @@ func Encrypt(params map[string]string, appkey string) (string, error) {
 	var signature = fmt.Sprintf("%X", mac.Sum(nil))
 	return signature, nil
 }
+
+func CutString(s, sep string) (before, after string, found bool) {
+	if i := strings.Index(s, sep); i >= 0 {
+		return s[:i], s[i+len(sep):], true
+	}
+	return s, "", false
+}
+
+func OpenEncrypt(appSecret string, params map[string]string) (string, error) {
+	if len(appSecret) == 0 {
+		return "", fmt.Errorf("miss appSecret")
+	}
+	keys := make([]string, 0, len(params))
+	for k, _ := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	keyValues := []string{}
+	for _, k := range keys {
+		if k == "signature" || len(k) == 0 {
+			continue
+		}
+		keyValues = append(keyValues, k+"="+params[k])
+	}
+	p := strings.Join(keyValues, "&")
+	mac := hmac.New(sha1.New, []byte(appSecret))
+	mac.Write([]byte(p))
+	var signature = fmt.Sprintf("%X", mac.Sum(nil))
+	return signature, nil
+}

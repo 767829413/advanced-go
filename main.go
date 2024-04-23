@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// etcd 集群化+客户端多Endpoints
-	url := "http://192.168.20.20/manage/nc/login/doLoginForManager" // 替换为您要请求的POST接口URL
+	url := "https://dev-s1.plaso.cn/school/manage/nc/login/doLoginForManager" // 替换为您要请求的POST接口URL
 
 	// 设置定时器，每隔一秒发送一次POST请求
 	ticker := time.NewTicker(1 * time.Second)
@@ -20,7 +20,7 @@ func main() {
 	for range ticker.C {
 		// 构造POST请求的body
 		jsonStr := []byte(`{
-			"loginName": "t2zwt2",
+			"loginName": "t2fy",
 			"password": "f379eaf3c831b04de153469d1bec345e",
 			"loginType": 0
 			

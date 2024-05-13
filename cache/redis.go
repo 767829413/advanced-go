@@ -2,8 +2,14 @@ package cache
 
 import (
 	"context"
-	"github.com/go-redis/redis/v8"
+	"errors"
 	"time"
+
+	"github.com/go-redis/redis/v8"
+)
+
+var (
+	errNilRedisClient = errors.New("redis client is nil")
 )
 
 // redisCache 实现了Cache接口
@@ -21,13 +27,29 @@ func (c *redisCache) Set(
 	value any,
 	expiration time.Duration,
 ) error {
-	return c.client.Set(ctx, key, value, expiration).Err()
+	if c.client == nil {
+		return errNilRedisClient
+	}
+	return c.client.Set(ctx, key, getValue(value), expiration).Err()
 }
 
-func (c *redisCache) Get(ctx context.Context, key string) (string, error) {
-	return c.client.Get(ctx, key).Result()
+func (c *redisCache) Get(ctx context.Context, key string) (string, bool, error) {
+	if c.client == nil {
+		return "", false, errNilRedisClient
+	}
+	res := c.client.Get(ctx, key)
+	result, err := res.Val(), res.Err()
+	if err == redis.Nil {
+		return "", false, nil
+	} else if err != nil {
+		return "", false, err
+	}
+	return result, true, nil
 }
 
 func (c *redisCache) Delete(ctx context.Context, key string) error {
+	if c.client == nil {
+		return errNilRedisClient
+	}
 	return c.client.Del(ctx, key).Err()
 }

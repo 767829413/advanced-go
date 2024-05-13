@@ -25,9 +25,17 @@ func (c *mySQLCache) Set(
 	value any,
 	expiration time.Duration,
 ) error {
-	valueStr, err := json.Marshal(value)
-	if err != nil {
-		return err
+	var valueStr string
+	if value == nil {
+		valueStr = ""
+	} else if str, ok := value.(string); ok {
+		valueStr = str
+	} else {
+		bytes, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		valueStr = string(bytes)
 	}
 	// local_cache 表结构为 cache_key VARCHAR, cache_value TEXT, expire_duration BIGINT
 	// 使用gorm的clause.OnConflict进行冲突处理，如果键存在则更新记录
@@ -38,24 +46,22 @@ func (c *mySQLCache) Set(
 		), // 指定发生冲突时更新的列
 	}).Create(&localCache{
 		Key:            key,
-		Value:          string(valueStr),
+		Value:          valueStr,
 		ExpireDuration: time.Now().Add(expiration).UnixMilli(),
 	}).Error
 }
 
-func (c *mySQLCache) Get(ctx context.Context, key string) (string, error) {
+func (c *mySQLCache) Get(ctx context.Context, key string) (string, bool, error) {
 	var cacheEntry localCache
 	result := c.db.WithContext(ctx).
 		First(&cacheEntry, "cache_key = ? AND expire_duration > ?", key, time.Now().UnixMilli())
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return "", nil
+			return "", false, nil
 		}
-		return "", result.Error
+		return "", false, result.Error
 	}
-	var value string
-	err := json.Unmarshal([]byte(cacheEntry.Value), &value)
-	return value, err
+	return cacheEntry.Value, true, nil
 }
 
 func (c *mySQLCache) Delete(ctx context.Context, key string) error {

@@ -13,4 +13,6 @@ type Cache interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	// 删除缓存
 	Delete(ctx context.Context, key string) error
+	// 获取过期时间
+	GetExpire(ctx context.Context, key string) (time.Duration, error)
 }

@@ -170,3 +170,30 @@ func TestCacheSetNilValue(t *testing.T) {
 	)
 	assert.True(t, isExist, "Expected the key to exist")
 }
+
+// TestGetExpire 测试获取缓存键的过期时间
+func TestGetExpire(t *testing.T) {
+	cacheManagerIns := cache.GetCacheManager()
+
+	// 设置一个键值对，过期时间为5秒
+	err := cacheManagerIns.Set("expireKey", "value", 5*time.Second)
+	assert.Nil(t, err, "Setting value should not result in an error")
+
+	// 立即获取设置的键的过期时间
+	expireDuration, err := cacheManagerIns.GetExpire("expireKey")
+	assert.Nil(t, err, "Getting expire time should not result in an error")
+
+	// 验证获取的过期时间是否在预期范围内
+	// 由于执行命令需要时间，过期时间可能略小于5秒，这里我们检查它是否大于4秒
+	assert.Greater(
+		t,
+		expireDuration.Seconds(),
+		float64(4),
+		"Expire time should be greater than 4 seconds",
+	)
+
+	// 可选：等待过期时间后，验证键是否已经过期
+	time.Sleep(6 * time.Second)
+	_, isExist := cacheManagerIns.Get("expireKey")
+	assert.False(t, isExist, "Key should not exist after expiration")
+}

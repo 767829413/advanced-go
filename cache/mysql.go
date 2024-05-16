@@ -68,6 +68,33 @@ func (c *mySQLCache) Delete(ctx context.Context, key string) error {
 	return c.db.WithContext(ctx).Delete(&localCache{}, "cache_key = ?", key).Error
 }
 
+// 获取key的过期时间
+func (c *mySQLCache) GetExpire(ctx context.Context, key string) (time.Duration, error) {
+	var cacheEntry localCache
+	// 尝试获取缓存条目
+	result := c.db.WithContext(ctx).First(&cacheEntry, "cache_key = ?", key)
+	if result.Error != nil {
+		// 如果未找到条目，返回0和nil错误
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return 0, nil
+		}
+		// 如果查询过程中出现其他错误，返回错误
+		return 0, result.Error
+	}
+
+	// 计算当前时间与过期时间戳之间的差值
+	now := time.Now().UnixMilli()
+	remainingTimeMs := cacheEntry.ExpireDuration - now
+
+	// 如果计算结果小于0，说明已过期，返回0
+	if remainingTimeMs < 0 {
+		return 0, nil
+	}
+
+	// 将剩余时间转换为time.Duration并返回
+	return time.Duration(remainingTimeMs) * time.Millisecond, nil
+}
+
 /*
 CREATE TABLE `local_cache` (
 

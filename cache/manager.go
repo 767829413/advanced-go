@@ -71,3 +71,17 @@ func (m *cacheManager) Del(key string) error {
 	}
 	return m.secondaryCache.Delete(ctx, key)
 }
+
+// GetExpire 尝试从主缓存获取键的过期时间，如果失败则从备份缓存获取
+func (m *cacheManager) GetExpire(key string) (time.Duration, error) {
+	if m.primaryCache == nil {
+		return m.secondaryCache.GetExpire(ctx, key)
+	}
+	duration, err := m.primaryCache.GetExpire(ctx, key)
+	if err != nil {
+		// 如果主缓存中获取失败，尝试从备份缓存获取
+		log.Println("cacheManager use primary cache GetExpire error: %v", err)
+		return m.secondaryCache.GetExpire(ctx, key)
+	}
+	return duration, nil
+}

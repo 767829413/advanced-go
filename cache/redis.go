@@ -53,3 +53,12 @@ func (c *redisCache) Delete(ctx context.Context, key string) error {
 	}
 	return c.client.Del(ctx, key).Err()
 }
+
+// 获取key的过期时间
+func (c *redisCache) GetExpire(ctx context.Context, key string) (time.Duration, error) {
+	if c.client == nil {
+		return 0, errNilRedisClient
+	}
+	res := c.client.TTL(ctx, key)
+	return res.Val(), res.Err()
+}

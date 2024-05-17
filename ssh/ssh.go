@@ -5,9 +5,21 @@ import (
 	"github.com/melbahja/goph"
 	"golang.org/x/crypto/ssh"
 	"log"
+	"os"
+	"strconv"
 )
 
 func main() {
+	if len(os.Args) != 4 {
+		log.Fatal("Usage: go run main.go <user> <ip> <port>")
+	}
+
+	user := os.Args[1]
+	ip := os.Args[2]
+	port, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatalf("Invalid port number: %s", os.Args[3])
+	}
 
 	// Start new ssh connection with private key.
 	auth, err := goph.Key("C:/Users/NUC/.ssh/id_rsa_wsl", "")
@@ -16,9 +28,9 @@ func main() {
 	}
 
 	client, err := goph.NewConn(&goph.Config{
-		User:     "fangyuan",
-		Addr:     "116.62.116.90",
-		Port:     10022,
+		User:     user,
+		Addr:     ip,
+		Port:     uint(port),
 		Auth:     auth,
 		Timeout:  goph.DefaultTimeout,
 		Callback: ssh.InsecureIgnoreHostKey(),

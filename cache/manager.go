@@ -35,7 +35,7 @@ func (m *cacheManager) Set(
 	// 如果主缓存设置失败，则使用备份缓存
 	if err != nil {
 		// 记录错误日志
-		log.Println("cacheManager use redis Set error: %v", err)
+		log.Printf("cacheManager use redis Set error: %v\n", err)
 	}
 	return m.secondaryCache.Set(ctx, key, value, expiration)
 }
@@ -45,15 +45,15 @@ func (m *cacheManager) Get(key string) (string, bool) {
 	if m.primaryCache == nil {
 		res, isExist, err := m.secondaryCache.Get(ctx, key)
 		// 记录错误日志
-		log.Println("cacheManager use mysql Get error: %v", err)
+		log.Printf("cacheManager use mysql Get error: %v\n", err)
 		return res, isExist
 	}
 	value, isExist, err := m.primaryCache.Get(ctx, key)
 	if err != nil {
 		// 记录错误日志
-		log.Println("cacheManager use redis Get error: %v", err)
+		log.Printf("cacheManager use redis Get error: %v\n", err)
 		res, isExist, err := m.secondaryCache.Get(ctx, key)
-		log.Println("cacheManager use after mysql Get error: %v", err)
+		log.Printf("cacheManager use after mysql Get error: %v\n", err)
 		return res, isExist
 	}
 	return value, isExist
@@ -67,7 +67,7 @@ func (m *cacheManager) Del(key string) error {
 	err := m.primaryCache.Delete(ctx, key)
 	if err != nil {
 		// 记录错误日志
-		log.Println("cacheManager use redis Delete error: %v", err)
+		log.Printf("cacheManager use redis Delete error: %v\n", err)
 	}
 	return m.secondaryCache.Delete(ctx, key)
 }
@@ -80,7 +80,7 @@ func (m *cacheManager) GetExpire(key string) (time.Duration, error) {
 	duration, err := m.primaryCache.GetExpire(ctx, key)
 	if err != nil {
 		// 如果主缓存中获取失败，尝试从备份缓存获取
-		log.Println("cacheManager use primary cache GetExpire error: %v", err)
+		log.Printf("cacheManager use primary cache GetExpire error: %v\n", err)
 		return m.secondaryCache.GetExpire(ctx, key)
 	}
 	return duration, nil

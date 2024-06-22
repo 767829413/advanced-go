@@ -27,6 +27,7 @@ require (
 	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/buntdb v1.3.0
+	github.com/yitter/idgenerator-go v1.3.3
 	go.etcd.io/etcd/client/v3 v3.5.10
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.0

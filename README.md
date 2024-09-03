@@ -10,3 +10,4 @@
 * [Go 实现一个自定义ping工具](./doc/ch8-Implementing%20ping%20by%20icmp%20package/README.md)
 * [老生常谈: goroutine id, machine id, process id](./doc/ch9-Cliches%20goroutine%20id,%20machine%20id,%20process%20id/README.md)
 * [老生常谈2: Go pprof use](./doc/ch10-Cliche%202%20Go%20pprof%20use/README.md)
+* [老生常谈3: Go module](./doc/ch11-Cliche%203%20Go%20module/README.md)

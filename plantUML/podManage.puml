@@ -1,0 +1,37 @@
+@startuml
+skinparam BoxPadding 10
+
+box "Kubernetes Cluster" #LightBlue
+participant "PodManager" as PM
+participant "Pod1" as P1
+participant "Pod2" as P2
+participant "Pod3" as P3
+participant "Pod4" as P4
+participant "Pod5" as P5
+participant "Pod6" as P6
+end box
+
+PM -> PM: Initialize with 3 pods
+activate PM
+
+PM -> P1 **: Create
+PM -> P2 **: Create
+PM -> P3 **: Create
+
+loop Every X seconds
+    P1 -> PM: Report heartbeat, CPU & memory usage
+    P2 -> PM: Report heartbeat, CPU & memory usage
+    P3 -> PM: Report heartbeat, CPU & memory usage
+
+    alt High load detected
+        PM -> P4 **: Create (Scale up)
+        PM -> P5 **: Create (Scale up)
+        PM -> P6 **: Create (Scale up)
+    else Idle state (3+ pods idle)
+        PM -> P4 !!: Terminate (Scale down)
+        PM -> P5 !!: Terminate (Scale down)
+        PM -> P6 !!: Terminate (Scale down)
+    end
+end
+
+@enduml

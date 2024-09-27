@@ -1,11 +1,11 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-)
+import ()
 
 func main() {
-	s := "ewqewqewq:2323232323"
-	fmt.Println(strings.HasPrefix(s, "1ewqewqewq:"))
+	var a []string
+	a = nil
+	for _, v := range a {
+		_ = v
+	}
 }

@@ -1,0 +1,118 @@
+以下是一个使用 Cilium/eBPF 加载和管理 eBPF 程序的基本示例：
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/cilium/ebpf"
+    "github.com/cilium/ebpf/rlimit"
+)
+
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go bpf kprobe.c -- -I../headers
+
+func main() {
+    // 允许当前进程锁定内存以加载 eBPF 资源
+    if err := rlimit.RemoveMemlock(); err != nil {
+        log.Fatal(err)
+    }
+
+    // 加载预编译的 eBPF 程序
+    objs := bpfObjects{}
+    if err := loadBpfObjects(&objs, nil); err != nil {
+        log.Fatalf("loading objects: %v", err)
+    }
+    defer objs.Close()
+
+    // 获取一个 kprobe 程序
+    kp, err := ebpf.NewProgram(&ebpf.ProgramSpec{
+        Name:    "kprobe_exec",
+        Type:    ebpf.Kprobe,
+        License: "GPL",
+    })
+    if err != nil {
+        log.Fatalf("creating program: %v", err)
+    }
+    defer kp.Close()
+
+    // 附加 kprobe 到系统调用
+    if err := kp.Attach("__x64_sys_execve"); err != nil {
+        log.Fatalf("attaching program: %v", err)
+    }
+
+    fmt.Println("Successfully loaded and attached eBPF program")
+
+    // 程序将继续运行，直到被中断
+    select {}
+}
+```
+
+`kprobe.c` 文件包含了一个简单的 eBPF 程序，用于跟踪系统调用。`bpf2go` 工具会将这个文件编译为 Go 代码，以便在 Go 程序中加载:
+
+```c
+#include <linux/bpf.h>
+#include <bpf/bpf_helpers.h>
+
+char LICENSE[] SEC("license") = "Dual BSD/GPL";
+
+// 定义一个简单的数据结构来存储事件数据
+struct event {
+    u32 pid;
+    u8 comm[80];
+};
+
+// 定义一个 BPF map 来存储事件数据
+struct {
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    __uint(key_size, sizeof(u32));
+    __uint(value_size, sizeof(u32));
+} events SEC(".maps");
+
+// kprobe 程序入口点
+SEC("kprobe/__x64_sys_execve")
+int kprobe_exec(struct pt_regs *ctx)
+{
+    struct event event = {};
+
+    // 获取当前进程 ID
+    event.pid = bpf_get_current_pid_tgid() >> 32;
+
+    // 获取当前进程名称
+    bpf_get_current_comm(&event.comm, sizeof(event.comm));
+
+    // 将事件数据发送到用户空间
+    bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &event, sizeof(event));
+
+    return 0;
+}
+```
+
+这个 `kprobe.c` 文件定义了一个简单的 eBPF 程序，用于跟踪系统调用 `execve`。让我为您解释一下这段代码的主要部分：
+
+* **头文件和许可证声明**: 包含了必要的 eBPF 头文件。声明了许可证，这在加载 eBPF 程序时是必需的。
+    
+* **事件结构体**: 定义了一个 event 结构体，用于存储进程 ID 和进程名称。
+    
+* **BPF Map 定义**: 定义了一个性能事件数组（`perf event array`）类型的 BPF map，用于将数据从内核空间传输到用户空间。
+    
+* **kprobe 程序**: 使用 SEC 宏定义了一个 `kprobe` 程序，附加到 `__x64_sys_execve` 系统调用。程序在每次调用 `execve` 系统调用时触发。
+    
+* **程序逻辑**:
+    
+* 获取当前进程的 ID 和名称。
+    
+* 将这些信息打包到 event 结构体中。
+    
+* 使用 `bpf_perf_event_output` 将事件数据发送到用户空间。
+    
+这个 eBPF 程序的主要功能是：
+
+* 监控 execve 系统调用的执行。
+    
+* 收集每次执行此系统调用的进程信息（ID 和名称）。
+    
+* 将收集到的信息发送到用户空间，以便进一步处理或分析。
+    
+在 `Cilium/eBPF` 的使用流程中，这个 C 文件会被编译成 eBPF 字节码，然后通过 Go 程序加载到内核中。`go:generate` 指令（在之前的 Go 代码中看到的）使用 `bpf2go` 工具来完成这个编译过程，生成可以在 Go 代码中使用的 eBPF 程序和 map 定义。这种方法允许你在 C 中编写高性能的 eBPF 程序，同时利用 Go 的强大特性来管理程序的生命周期和处理从内核收集的数据。如果你想要修改这个程序的行为，比如跟踪不同的系统调用或收集额外的信息，你可以直接修改这个 C 文件，然后重新生成和编译你的 Go 代码。

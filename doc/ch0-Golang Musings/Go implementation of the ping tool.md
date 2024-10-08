@@ -1,4 +1,4 @@
-# Go 实现ping工具方法
+# Golang 实现ping工具方法
 
 ## 介绍ping
 

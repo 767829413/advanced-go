@@ -1,4 +1,4 @@
-# Go 语⾔的内存管理与垃圾回收
+# Golang 语⾔的内存管理与垃圾回收
 
 ## 基本概念
 
@@ -19,16 +19,16 @@
   ```C
   int *func(void)
   {
-  	int num = 123;
-  	/* ... */
-  	return &num;
+    int num = 123;
+    /* ... */
+    return &num;
   }
   ```
 
  上面的可能导致: 
 
-	悬垂指针：Dangling pointer
-	可能触发：Segmentation fault!!!!
+    悬垂指针：Dangling pointer
+    可能触发：Segmentation fault!!!!
 
  堆分配，在 Go 语⾔⾥，为什么我们不⽤担⼼ dangling pointer? 
 
@@ -38,12 +38,12 @@
  package main
 
  func main() {
- 	println(getNP())
+    println(getNP())
  }
  
  func getNP() *int {
- 	var n = 1234
- 	return &n
+    var n = 1234
+    return &n
  }
  ```
 
@@ -235,12 +235,12 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
  package main
  
  func main() {
- 	allocOnHeap()
+    allocOnHeap()
  }
  
  func allocOnHeap() {
- 	var m = make([]int, 10240)
- 	println(m)
+    var m = make([]int, 10240)
+    println(m)
  }
  ```
  
@@ -367,8 +367,8 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 // 新的对象进行标灰
 // 实现的是强三色不变性
 func DijkstraWB(slot *unsafe.Pointer, ptr unsafe.Pointer) {
-	shade(ptr)
-	*slot = ptr
+    shade(ptr)
+    *slot = ptr
 }
 ```
 
@@ -391,8 +391,8 @@ func DijkstraWB(slot *unsafe.Pointer, ptr unsafe.Pointer) {
 // 旧的对象进行标灰
 // 实现的是弱三色不变性
 func YuasaWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
-	shade(*slot)
-	*slot = ptr
+    shade(*slot)
+    *slot = ptr
 }
 ```
 
@@ -424,11 +424,11 @@ func YuasaWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
 ```go
 // Hybrid barrier(混合写屏障)
 func HybridWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
-	shade(*slot)
-	// 检查当前栈是不是灰色的
-	if current stack is grey
-		shade(ptr)
-	*slot = ptr
+    shade(*slot)
+    // 检查当前栈是不是灰色的
+    if current stack is grey
+        shade(ptr)
+    *slot = ptr
 }
 ```
 
@@ -437,10 +437,10 @@ func HybridWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
 ```go
 // 混合屏障会将指针(指向堆的)修改前指向的位置和修改后指向的位置都标灰
 func RealityWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
-	// 没有进行栈的检查
-	shade(*slot)
-	shade(ptr)
-	*slot = ptr
+    // 没有进行栈的检查
+    shade(*slot)
+    shade(ptr)
+    *slot = ptr
 }
 ```
 
@@ -466,32 +466,32 @@ Go 实际的混合写屏障：代码在 gcWriteBarrier 汇编函数中: <https:/
 // dowrite:
 //     MOVL    AX, 88(CX)
 TEXT gcWriteBarrier<>(SB),NOSPLIT,$28
-	// Save the registers clobbered by the fast path. This is slightly
-	// faster than having the caller spill these.
-	MOVL	CX, 20(SP)
-	MOVL	BX, 24(SP)
+    // Save the registers clobbered by the fast path. This is slightly
+    // faster than having the caller spill these.
+    MOVL	CX, 20(SP)
+    MOVL	BX, 24(SP)
 retry:
-	// TODO: Consider passing g.m.p in as an argument so they can be shared
-	// across a sequence of write barriers.
-	get_tls(BX)
-	MOVL	g(BX), BX
-	MOVL	g_m(BX), BX
-	MOVL	m_p(BX), BX
-	// Get current buffer write position.
-	MOVL	(p_wbBuf+wbBuf_next)(BX), CX	// original next position
-	ADDL	DI, CX				// new next position
-	// Is the buffer full?
-	CMPL	CX, (p_wbBuf+wbBuf_end)(BX)
-	JA	flush
-	// Commit to the larger buffer.
-	MOVL	CX, (p_wbBuf+wbBuf_next)(BX)
-	// Make return value (the original next position)
-	SUBL	DI, CX
-	MOVL	CX, DI
-	// Restore registers.
-	MOVL	20(SP), CX
-	MOVL	24(SP), BX
-	RET
+    // TODO: Consider passing g.m.p in as an argument so they can be shared
+    // across a sequence of write barriers.
+    get_tls(BX)
+    MOVL	g(BX), BX
+    MOVL	g_m(BX), BX
+    MOVL	m_p(BX), BX
+    // Get current buffer write position.
+    MOVL	(p_wbBuf+wbBuf_next)(BX), CX	// original next position
+    ADDL	DI, CX				// new next position
+    // Is the buffer full?
+    CMPL	CX, (p_wbBuf+wbBuf_end)(BX)
+    JA	flush
+    // Commit to the larger buffer.
+    MOVL	CX, (p_wbBuf+wbBuf_next)(BX)
+    // Make return value (the original next position)
+    SUBL	DI, CX
+    MOVL	CX, DI
+    // Restore registers.
+    MOVL	20(SP), CX
+    MOVL	24(SP), BX
+    RET
 ```
 
 `垃圾回收代码流程`

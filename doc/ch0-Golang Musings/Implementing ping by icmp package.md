@@ -1,4 +1,4 @@
-# 通过 icmp 软件包实现 ping
+# Golang 实现一个自定义ping工具
 
 项目地址: <https://github.com/767829413/advanced-go/tree/main/ping/mping>
 

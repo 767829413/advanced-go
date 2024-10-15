@@ -4,3 +4,4 @@
 * [Go pprof use](./2.md)
 * [Go module](./3.md)
 * [Go weak pointer](./4.md)
+* [Go bit operation](./5.md)

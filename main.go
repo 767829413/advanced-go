@@ -1,59 +1,42 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"time"
 )
 
 func main() {
-	// 假设我们想要获取 ID 为 5 的项目的路径
-	path := getPath(5)
-	fmt.Println("Path:", path)
+	uuid := make([]byte, 16)
+	makeV7(uuid)
+	fmt.Printf("Generated UUID v7: %x\n", uuid)
 }
 
-type FileSystemItem struct {
-	ID             int    `json:"id"`
-	Name           string `json:"name"`
-	FileSystemType int    `json:"file_system_type"`
-	FileUsage      int    `json:"file_usage"`
-	ParentID       int    `json:"parent_id"`
-	CreatorID      int    `json:"creator_id"`
-	RawfileFileid  string `json:"rawfile_fileid"`
-	CreatedAt      int64  `json:"created_at"`
-	UpdatedAt      int64  `json:"updated_at"`
-	DeletedAt      int64  `json:"deleted_at"`
-	Cover          string `json:"cover"`
-	RelationType   int    `json:"relation_type"`
+func makeV7(uuid []byte) {
+	_ = uuid[15]        // bounds check
+	t, s := getV7Time() // 返回毫秒数和序列号
+
+	// 填充前48bit的时间戳
+	uuid[0] = byte(t >> 40)
+	uuid[1] = byte(t >> 32)
+	uuid[2] = byte(t >> 24)
+	uuid[3] = byte(t >> 16)
+	uuid[4] = byte(t >> 8)
+	uuid[5] = byte(t)
+
+	uuid[6] = 0x70 | (0x0F & byte(s>>8)) // 设置版本号7以及后四位存储序列号的前四位
+	uuid[7] = byte(s)                    // 存储序列号的后八位
+
+	// 剩余的 uuid[8] ~ uuid[15] 位已填充随机数
+	rand.Read(uuid[8:])
 }
 
-// 假设我们有一个函数来获取所有 FileSystemItem
-func getAllFileSystemItems() map[int]*FileSystemItem {
-	// 这个函数应该返回一个 map，其中 key 是 ID，value 是 FileSystemItem 指针
-	// 实现细节取决于你的数据存储方式
-
-	return nil
-}
-
-func getPath(itemID int) []string {
-	items := getAllFileSystemItems()
-	var path []string
-
-	var buildPath func(int)
-	buildPath = func(id int) {
-		if item, ok := items[id]; ok {
-			path = append(path, item.Name)
-			if item.ParentID != 0 {
-				buildPath(item.ParentID)
-			}
-		}
-	}
-
-	buildPath(itemID)
-
-	// 反转路径
-	for i := 0; i < len(path)/2; i++ {
-		j := len(path) - 1 - i
-		path[i], path[j] = path[j], path[i]
-	}
-
-	return path
+// 返回毫秒数和序列号
+func getV7Time() (uint64, uint16) {
+	now := time.Now().UnixMilli()
+	seq := make([]byte, 2)
+	rand.Read(seq)
+	sequence := binary.BigEndian.Uint16(seq)
+	return uint64(now), sequence
 }

@@ -9,3 +9,4 @@
 * [Golang 实现一个自定义ping工具](./Implementing%20ping%20by%20icmp%20package.md)
 * [Golang 1.23 unique package](./New%20package%20Unique.md)
 * [Golang 生产者消费者模式杂谈之SPMC](./Go%20SPMC.md)
+* [Golang 结构体私有字段修改](./Golang%20Structure%20Private%20Field%20Modification.md)

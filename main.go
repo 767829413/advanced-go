@@ -1,42 +1,38 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
-	"time"
+	"reflect"
+	"unsafe"
+)
+
+type flag uintptr
+
+const (
+	flagKindWidth        = 5 // there are 27 kinds
+	flagKindMask    flag = 1<<flagKindWidth - 1
+	flagStickyRO    flag = 1 << 5
+	flagEmbedRO     flag = 1 << 6
+	flagIndir       flag = 1 << 7
+	flagAddr        flag = 1 << 8
+	flagMethod      flag = 1 << 9
+	flagMethodShift      = 10
+	flagRO          flag = flagStickyRO | flagEmbedRO
 )
 
 func main() {
-	uuid := make([]byte, 16)
-	makeV7(uuid)
-	fmt.Printf("Generated UUID v7: %x\n", uuid)
-}
+	var x = 47
 
-func makeV7(uuid []byte) {
-	_ = uuid[15]        // bounds check
-	t, s := getV7Time() // 返回毫秒数和序列号
+	v := reflect.ValueOf(x)
+	fmt.Printf("原始值: %d, CanSet: %v\n", v.Int(), v.CanSet()) // 47, false
+	// v.Set(reflect.ValueOf(50))
 
-	// 填充前48bit的时间戳
-	uuid[0] = byte(t >> 40)
-	uuid[1] = byte(t >> 32)
-	uuid[2] = byte(t >> 24)
-	uuid[3] = byte(t >> 16)
-	uuid[4] = byte(t >> 8)
-	uuid[5] = byte(t)
+	flagField := reflect.ValueOf(&v).Elem().FieldByName("flag")
+	flagPtr := (*uintptr)(unsafe.Pointer(flagField.UnsafeAddr()))
 
-	uuid[6] = 0x70 | (0x0F & byte(s>>8)) // 设置版本号7以及后四位存储序列号的前四位
-	uuid[7] = byte(s)                    // 存储序列号的后八位
-
-	// 剩余的 uuid[8] ~ uuid[15] 位已填充随机数
-	rand.Read(uuid[8:])
-}
-
-// 返回毫秒数和序列号
-func getV7Time() (uint64, uint16) {
-	now := time.Now().UnixMilli()
-	seq := make([]byte, 2)
-	rand.Read(seq)
-	sequence := binary.BigEndian.Uint16(seq)
-	return uint64(now), sequence
+	// 修改flag字段的值
+	*flagPtr |= uintptr(flagAddr)          // 设置可寻址标志位
+	fmt.Printf("CanSet: %v\n", v.CanSet()) // true
+	v.SetInt(50)
+	fmt.Printf("修改后的值: %d\n", v.Int()) // 50
 }

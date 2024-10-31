@@ -4,3 +4,5 @@ config/conf
 sql
 ./main.go
 websocket-plaso
+ecc
+ecli

@@ -5,15 +5,15 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 // 定义一个简单的数据结构来存储事件数据
 struct event {
-    u32 pid;
-    u8 comm[80];
+    __u32 pid;
+    __u8 comm[80];
 };
 
 // 定义一个 BPF map 来存储事件数据
 struct {
     __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-    __uint(key_size, sizeof(u32));
-    __uint(value_size, sizeof(u32));
+    __uint(key_size, sizeof(__u32));
+    __uint(value_size, sizeof(__u32));
 } events SEC(".maps");
 
 // kprobe 程序入口点

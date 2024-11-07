@@ -3,3 +3,6 @@
 * [eBPF 是啥能干啥](./1.md)
 * [eBPF 开发环境配置](./2.md)
 * [eBPF 尝试从 Hello World 开始](./3.md)
+* [eBPF kprobe 浅尝](./4.md)
+* [eBPF fentry/fexit 初体验](./5.md)
+* [eBPF 跟踪 goroutine 状态的变化](./6.md)

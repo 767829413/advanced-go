@@ -65,11 +65,11 @@
 
  golang中逃逸分析的代码可以在去这里看: <https://github.com/golang/go/blob/master/src/cmd/compile/internal/escape/escape.go>
 
-* 逃逸分析是一种优化技术，用于确定哪些Go变量可以在堆栈上分配，以减少内存分配和垃圾回收成本。
-* 逃逸分析需要遵守两个关键规则：不允许在堆中存储指向堆栈对象的指针，不允许指向堆栈对象的指针存在于对象已销毁的情况下。
-* 在Go语言中，逃逸分析通过对抽象语法树（AST）进行静态数据流分析来实现。建立带权重的有向图，遍历图，查找可能违反上述不变式的赋值路径。
-* EA（Escape Analysis）将每个分配语句或表达式映射到唯一的“位置”，并将每个赋值建模为位置之间的有向边。EA（Escape Analysis）记录每个边的解引用操作数减去寻址操作数作为边的权重。
-* 为支持跨程序的分析，EA还记录堆到每个函数的参数和结果参数的数据流，并将此信息总结为“参数标签”，用于执行静态调用点的函数参数的逃逸分析。
+* 逃逸分析是一种优化技术，用于确定哪些Go变量可以在堆栈上分配，以减少内存分配和垃圾回收成本. 
+* 逃逸分析需要遵守两个关键规则：不允许在堆中存储指向堆栈对象的指针，不允许指向堆栈对象的指针存在于对象已销毁的情况下. 
+* 在Go语言中，逃逸分析通过对抽象语法树（AST）进行静态数据流分析来实现. 建立带权重的有向图，遍历图，查找可能违反上述不变式的赋值路径. 
+* EA（Escape Analysis）将每个分配语句或表达式映射到唯一的“位置”，并将每个赋值建模为位置之间的有向边. EA（Escape Analysis）记录每个边的解引用操作数减去寻址操作数作为边的权重. 
+* 为支持跨程序的分析，EA还记录堆到每个函数的参数和结果参数的数据流，并将此信息总结为“参数标签”，用于执行静态调用点的函数参数的逃逸分析. 
 
  还可以通过关于 escape.go 的单元测试来看: <https://github.com/golang/go/tree/master/test>
 
@@ -89,9 +89,9 @@
 
 `内存管理中的三个⻆⾊`
 
-* Mutator：fancy(花哨的) word for application，其实就是你写的应⽤程序，它会不断地修改对象的引⽤关系，即对象图。
-* Allocator：内存分配器，负责管理从操作系统中分配出的内存空间，C语言中 malloc 其实底层就有⼀个内存分配器的实现(glibc 中)，tcmalloc 是 malloc 多线程改进版。Go 中的实现类似 tcmalloc。
-* Collector：垃圾收集器，负责清理死对象，释放内存空间。
+* Mutator：fancy(花哨的) word for application，其实就是你写的应⽤程序，它会不断地修改对象的引⽤关系，即对象图. 
+* Allocator：内存分配器，负责管理从操作系统中分配出的内存空间，C语言中 malloc 其实底层就有⼀个内存分配器的实现(glibc 中)，tcmalloc 是 malloc 多线程改进版. Go 中的实现类似 tcmalloc. 
+* Collector：垃圾收集器，负责清理死对象，释放内存空间. 
 
 *Mutator、Allocator、Collector 概览：*
  
@@ -177,9 +177,9 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 *内存分配器在 Go 语⾔中维护了⼀个多级结构：*
 
 * mcache -> mcentral -> mheap
-* mcache：与 P 绑定，本地内存分配操作，不需要加锁。
-* mcentral：中⼼分配缓存，分配时需要上锁，不同 spanClass 使⽤不同的锁。
-* mheap：全局唯⼀，从 OS 申请内存，并修改其内存定义结构时，需要加锁，是个全局锁。
+* mcache：与 P 绑定，本地内存分配操作，不需要加锁. 
+* mcentral：中⼼分配缓存，分配时需要上锁，不同 spanClass 使⽤不同的锁. 
+* mheap：全局唯⼀，从 OS 申请内存，并修改其内存定义结构时，需要加锁，是个全局锁. 
 
  **sizeClass 分类(sizeClass = spanClass >> 1)**
  
@@ -195,7 +195,7 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 
 `Large alloc`
 
-* ⼤对象分配会直接越过 mcache、mcentral，直接从 mheap 进⾏相应数量的 page 分配。
+* ⼤对象分配会直接越过 mcache、mcentral，直接从 mheap 进⾏相应数量的 page 分配. 
 * pageAlloc 结构经过多个版本的变化，从：freelist -> treap -> radix tree，查找时间复杂度越来越低，结构越来越复杂
 
 `补充`
@@ -221,9 +221,9 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 `垃圾分类`
 
 * 语义垃圾(semantic garbage)—有的被称作内存泄露
-  * 语义垃圾指的是从语法上可达(可以通过局部、全局变量引⽤得到)的对象，但从语义上来讲他们是垃圾，垃圾回收器对此⽆能为⼒。
+  * 语义垃圾指的是从语法上可达(可以通过局部、全局变量引⽤得到)的对象，但从语义上来讲他们是垃圾，垃圾回收器对此⽆能为⼒. 
 * 语法垃圾(syntactic garbage)
-  * 语法垃圾是讲那些从语法上⽆法到达的对象，这些才是垃圾收集器主要的收集⽬标。
+  * 语法垃圾是讲那些从语法上⽆法到达的对象，这些才是垃圾收集器主要的收集⽬标. 
 
 `语义垃圾(semantic garbage)`
 
@@ -257,10 +257,10 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 
 `常⻅垃圾回收算法`
 
-* 引⽤计数(Reference Counting)：某个对象的根引⽤计数变为 0 时，其所有⼦节点均需被回收。
-* 标记压缩(Mark-Compact)：将存活对象移动到⼀起，解决内存碎⽚问题。
-* 复制算法(Copying)：将所有正在使⽤的对象从 From 复制到 To 空间，堆利⽤率只有⼀半。
-* 标记清扫(Mark-Sweep)：解决不了内存碎⽚问题。需要与能尽量避免内存碎⽚的分配器使⽤，如 tcmalloc。 <— Go 在这⾥
+* 引⽤计数(Reference Counting)：某个对象的根引⽤计数变为 0 时，其所有⼦节点均需被回收. 
+* 标记压缩(Mark-Compact)：将存活对象移动到⼀起，解决内存碎⽚问题. 
+* 复制算法(Copying)：将所有正在使⽤的对象从 From 复制到 To 空间，堆利⽤率只有⼀半. 
+* 标记清扫(Mark-Sweep)：解决不了内存碎⽚问题. 需要与能尽量避免内存碎⽚的分配器使⽤，如 tcmalloc.  <— Go 在这⾥
 
  演示动画和说明: <https://spin.atomicobject.com/2014/09/03/visualizing-garbage-collection-algorithms/>
 
@@ -310,9 +310,9 @@ mem_linux.go, mem_windows.go, 主要逻辑可以去看 <https://github.com/golan
 
 `三⾊标记抽象与解释`
 
-* ⿊：已经扫描完毕，⼦节点扫描完毕。(gcmarkbits = 1，且在队列外。)
-* 灰：已经扫描完毕，⼦节点未扫描完毕。(gcmarkbits = 1, 在队列内)
-* ⽩：未扫描，collector 不知道任何相关信息。
+* ⿊：已经扫描完毕，⼦节点扫描完毕. (gcmarkbits = 1，且在队列外. )
+* 灰：已经扫描完毕，⼦节点未扫描完毕. (gcmarkbits = 1, 在队列内)
+* ⽩：未扫描，collector 不知道任何相关信息. 
 
 动画演示: <https://www.figma.com/proto/tSl3CoSWKitJtvIhqLd8Ek/memory-management-%26%26-garbage-collection?node-id=2-38&starting-point-node-id=2%3A38>
 
@@ -412,7 +412,7 @@ func YuasaWB(slot *unsafe.Pointer, ptr unsafe.pointer) {
 
 **如果我们在所有指针操作中都加上 Dijkstra barrier 或者 Yuasa barrier，就可以避免对象丢失了，为啥实际的实现没那么简单？**
 
-* 因为栈的操作频率极⾼，所以 Go 在栈上指针操作上是不加 barrier 的。
+* 因为栈的操作频率极⾼，所以 Go 在栈上指针操作上是不加 barrier 的. 
   * 因为 Go 的栈上的指针编辑不加 barrier，所以单独使⽤任意⼀种 barrier 都会有问题
     * Dijkstra barrier(插入写屏障) 的问题
       * 会出现栈上⿊指向堆上⽩的情况,该⽩⾊对象之前被堆上对象所指
@@ -504,11 +504,11 @@ retry:
 `CPU 使⽤控制`
 
 * GC 的 CPU 控制⽬标是整体 25%
-* 当 P = 4 * N 时，只要启动 N 个 worker 就可以。
+* 当 P = 4 * N 时，只要启动 N 个 worker 就可以. 
 * 但 P ⽆法被 4 整除时，需要兼职的 gcMarkWorker 来帮助做⼀部分⼯作
-  * 全职 GC 员⼯：Dedicated worker，需要⼀直⼲活，直到被抢占。
-  * 兼职 GC 员⼯：Fractional worker，达到业绩⽬标(fractionalUtilizationGoal)时可以主动让出。
-  * 还有⼀种 IDLE 模式，在调度循环中发现找不到可执⾏的 g，但此时有标记任务未完成，就⽤开启 IDLE 模式去帮忙。
+  * 全职 GC 员⼯：Dedicated worker，需要⼀直⼲活，直到被抢占. 
+  * 兼职 GC 员⼯：Fractional worker，达到业绩⽬标(fractionalUtilizationGoal)时可以主动让出. 
+  * 还有⼀种 IDLE 模式，在调度循环中发现找不到可执⾏的 g，但此时有标记任务未完成，就⽤开启 IDLE 模式去帮忙. 
 * Worker 运⾏模式在：\_p\_.gcMarkWorkerMode
 
  ![mm-11.png](https://s2.loli.net/2023/06/13/3eKk4HwQgd58ExM.png)

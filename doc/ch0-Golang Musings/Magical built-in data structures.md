@@ -678,9 +678,9 @@ func main() {
  ![context_some.png](https://s2.loli.net/2023/06/09/m1QtcHZSMVs6a2v.png)
 
 - emptyCtx，所有 ctx 类型的根
-- valueCtx，主要就是为了在 ctx 中嵌⼊上下⽂数据，⼀个简单的 k 和 v结构，同⼀个 ctx 内只⽀持⼀对 kv，需要更多的 kv 的话，会形成⼀棵树形结构。
+- valueCtx，主要就是为了在 ctx 中嵌⼊上下⽂数据，⼀个简单的 k 和 v结构，同⼀个 ctx 内只⽀持⼀对 kv，需要更多的 kv 的话，会形成⼀棵树形结构. 
 - cancelCtx，⽤来取消程序的执⾏树
-- timerCtx，在 cancelCtx 上包了⼀层，⽀持基于时间的 cancel。
+- timerCtx，在 cancelCtx 上包了⼀层，⽀持基于时间的 cancel. 
 
 `Context value结构`
 

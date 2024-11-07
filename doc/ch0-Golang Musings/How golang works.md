@@ -154,7 +154,7 @@ Programmers sometimes distinguish between what gets embedded in a program when i
 		fmt.Println("hello world in goroutine")
 	}()
 
-都是向 runtime 提交了⼀个计算任务。
+都是向 runtime 提交了⼀个计算任务. 
 func() { xxxxx } ⾥包裹的代码就是这个计算任务的内容
 ```
 
@@ -184,9 +184,9 @@ func() { xxxxx } ⾥包裹的代码就是这个计算任务的内容
 
 `字段定义`
 
-* G：goroutine，⼀个计算任务。由需要执⾏的代码和其上下⽂组成，上下⽂包括：当前代码位置，栈顶、栈底地址，状态等。
+* G：goroutine，⼀个计算任务. 由需要执⾏的代码和其上下⽂组成，上下⽂包括：当前代码位置，栈顶、栈底地址，状态等. 
 
-* M：machine，系统线程，执⾏实体，想要在 CPU 上执⾏代码，必须有线程，与 C 语⾔中的线程相同，通过系统调⽤ clone 来创建。
+* M：machine，系统线程，执⾏实体，想要在 CPU 上执⾏代码，必须有线程，与 C 语⾔中的线程相同，通过系统调⽤ clone 来创建. 
 
 * P：processor，虚拟处理器，M 必须获得 P 才能执⾏代码，否则必须陷⼊休眠(后台监控线程除外)，你也可以将其理解为⼀种 token，有这个 token，才有在物理 CPU 核⼼上执⾏的权⼒
 
@@ -565,7 +565,7 @@ func KillOne() {
 
 6. 调度循环：
 
-* 线程 M 在持有 P 的情况下不断消费运⾏队列中的 G 的过程。
+* 线程 M 在持有 P 的情况下不断消费运⾏队列中的 G 的过程. 
 
 7. 处理阻塞：
 

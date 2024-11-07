@@ -111,7 +111,7 @@ func openConn() (*net.IPConn, error) {
 	// 使用 syscall.SetsockoptInt 设置 socket 选项 SO_TIMESTAMPING，启用所定义的时间戳标志
 	if err := syscall.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_TIMESTAMPING, flags); err != nil {
 		// 处理时间戳选项设置失败的情况
-		// 如果设置 SO_TIMESTAMPING 失败，将标志 supportTxTimestamping 和 supportRxTimestamping 设置为 false。
+		// 如果设置 SO_TIMESTAMPING 失败，将标志 supportTxTimestamping 和 supportRxTimestamping 设置为 false.
 		supportTxTimestamping = false
 		supportRxTimestamping = false
 

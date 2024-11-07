@@ -196,7 +196,7 @@ type CreateLectureData struct {
 // 创建 AI 分析课堂
 // POST /api/v2/{SCHOOL_ID}/create_lecture/{LECTURE_ID}
 // 当 LECTURE_ID 在麦盟系统不存在，就在麦盟系统创建，否则为更新
-// 客户端发起 POST 请求，请求体包含年级、班级、学科、老师等课堂基本信息和录制好的音视频、教案的下载地址信息。麦盟服务器收到请求后，把它加入分析任务队列 ，分析完成后，如果客户端当时指定过回调地址(callback)，则向该地址发送 POST 请求，通知该堂课分析完成，客户端可以更新自有数据库中课堂的状态，以在界面中提供查看报告的链接
+// 客户端发起 POST 请求，请求体包含年级、班级、学科、老师等课堂基本信息和录制好的音视频、教案的下载地址信息. 麦盟服务器收到请求后，把它加入分析任务队列 ，分析完成后，如果客户端当时指定过回调地址(callback)，则向该地址发送 POST 请求，通知该堂课分析完成，客户端可以更新自有数据库中课堂的状态，以在界面中提供查看报告的链接
 // 待签名字符串: string_to_sign = "api:create_lecture:" + $SCHOOL_ID + ":" + $LECTURE_ID + ":" + exp + ":" + $AccessSecret
 func (c *MaimengClient) CreateLecture(
 	lectureId string,
@@ -221,7 +221,7 @@ type DeleteLectureResponse struct {
 
 // 删除 AI 分析课堂
 // DELETE /api/v2/{SCHOOL_ID}/delete_lecture/{LECTURE_ID}
-// 用以在麦盟端删除某个指定 LECTURE_ID 的 AI 分析课堂。如果这节课还没开始或已结束，则正常删除，如果在分析中，则停止分析任务后删除
+// 用以在麦盟端删除某个指定 LECTURE_ID 的 AI 分析课堂. 如果这节课还没开始或已结束，则正常删除，如果在分析中，则停止分析任务后删除
 // 待签名字符串：string_to_sign = "api:delete_lecture:" + $SCHOOL_ID + ":" + $LECTURE_ID + ":" + exp + ":" + $AccessSecret
 func (c *MaimengClient) DeleteLecture(
 	lectureId string,

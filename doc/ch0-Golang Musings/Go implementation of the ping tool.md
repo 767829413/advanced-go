@@ -184,7 +184,7 @@ func ProBing() {
 
 ## 总结
 
-介绍了使用Go语言实现ping工具的几种方式。
+介绍了使用Go语言实现ping工具的几种方式. 
 
 1. 通过系统调用的方式，使用os/exec包执行系统命令来实现ping功能
 2. 使用 golang.org/x/net/icmp 包以及 golang.org/x/net/ipv4 包实现了基于ICMP协议的ping功能

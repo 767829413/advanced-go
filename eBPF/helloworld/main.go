@@ -16,19 +16,19 @@ import (
 )
 
 func main() {
-	// 允许当前进程锁定内存以用于 eBPF 资源。
+	// 允许当前进程锁定内存以用于 eBPF 资源.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("failed to remove memlock: %v", err)
 	}
 
-	// 加载 eBPF 程序。
+	// 加载 eBPF 程序.
 	objs := minimal.MinimalObjects{}
 	if err := minimal.LoadMinimalObjects(&objs, nil); err != nil {
 		log.Fatalf("loading objects: %v", err)
 	}
 	defer objs.Close()
 
-	// 将 eBPF 程序附加到 sys_enter_write tracepoint。
+	// 将 eBPF 程序附加到 sys_enter_write tracepoint.
 	tp, err := link.Tracepoint("syscalls", "sys_enter_write", objs.HandleTp, nil)
 	if err != nil {
 		log.Fatalf("opening tracepoint: %v", err)

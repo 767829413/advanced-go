@@ -26,17 +26,17 @@ var (
 )
 ```
 
-包含以上参数，使用 github.com/spf13/pflag 进行解析。pflag更强大，支持短参数和长参数，支持将参数放在最后面，更符合 Linux ping/traceroute 的参数样式。
+包含以上参数，使用 github.com/spf13/pflag 进行解析. pflag更强大，支持短参数和长参数，支持将参数放在最后面，更符合 Linux ping/traceroute 的参数样式. 
 
 参数的介绍:
 
-- count: 你可以持续进行探测，也可以使用-c指定发多少包后退出。
-- tos: 可以指定网络的优先级，针对不同的优先级进行探测和压测。
-- size: 指定包的大小。这里的包大小其实指的是 payload, 不包含 ICMP、IP 以及以上的包头
+- count: 你可以持续进行探测，也可以使用-c指定发多少包后退出. 
+- tos: 可以指定网络的优先级，针对不同的优先级进行探测和压测. 
+- size: 指定包的大小. 这里的包大小其实指的是 payload, 不包含 ICMP、IP 以及以上的包头
 - timeout: 指定发送数据的超时时间
 - rate: 发包的频率， 也就是 pps (packet/second)
 - delay: 最大延迟时间，超过这个时间的包就丢弃了
-- bitflip: 检查经过的物理链路中是否有改包的行为。 芯片的老化、bug、或者电磁辐射等等有可能把链路中的一个或者几个比特位进行修改，网络和服务器可能能通过 CRC 检查到，但是由于 CRC 的缺陷也可能检查不到，导致落盘的数据是错误的。
+- bitflip: 检查经过的物理链路中是否有改包的行为.  芯片的老化、bug、或者电磁辐射等等有可能把链路中的一个或者几个比特位进行修改，网络和服务器可能能通过 CRC 检查到，但是由于 CRC 的缺陷也可能检查不到，导致落盘的数据是错误的. 
 
 ```bash
 go run ping/main.go baidu.com csdn.com
@@ -136,7 +136,7 @@ func openConn() (*net.IPConn, error) {
 	// 使用 syscall.SetsockoptInt 设置 socket 选项 SO_TIMESTAMPING，启用所定义的时间戳标志
 	if err := syscall.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_TIMESTAMPING, flags); err != nil {
 		// 处理时间戳选项设置失败的情况
-		// 如果设置 SO_TIMESTAMPING 失败，将标志 supportTxTimestamping 和 supportRxTimestamping 设置为 false。
+		// 如果设置 SO_TIMESTAMPING 失败，将标志 supportTxTimestamping 和 supportRxTimestamping 设置为 false. 
 		supportTxTimestamping = false
 		supportRxTimestamping = false
 
@@ -382,7 +382,7 @@ func read(conn *net.IPConn) error {
 
 ## 统计输出
 
-收发包已经完成, 目前是在命令行中打印出每一秒的统计信息，包括发送了多少包，丢弃了多少包，丢包率是多少，时延是多少。
+收发包已经完成, 目前是在命令行中打印出每一秒的统计信息，包括发送了多少包，丢弃了多少包，丢包率是多少，时延是多少. 
 
 统计方法:
 

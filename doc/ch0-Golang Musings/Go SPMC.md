@@ -133,7 +133,7 @@ func (d *poolDequeue) popTail() (any, bool) {
 			return nil, false
 		}
 
-		// 确认头部和尾部（用于我们之前的推测性检查），并递增尾部。如果成功，那么我们就拥有了尾部的插槽。
+		// 确认头部和尾部（用于我们之前的推测性检查），并递增尾部. 如果成功，那么我们就拥有了尾部的插槽. 
 		ptrs2 := d.pack(head, tail+1)
 		if d.headTail.CompareAndSwap(ptrs, ptrs2) {
 			// 成功读取了一个 slot
@@ -173,7 +173,7 @@ func (d *poolDequeue) popHead() (any, bool) {
 			return nil, false
 		}
 
-		// 确认头部和尾部（用于我们之前的推测性检查），并递减头部。如果成功，那么我们就拥有了头部的插槽。
+		// 确认头部和尾部（用于我们之前的推测性检查），并递减头部. 如果成功，那么我们就拥有了头部的插槽. 
 		head--
 		ptrs2 := d.pack(head, tail)
 		if d.headTail.CompareAndSwap(ptrs, ptrs2) {
@@ -203,18 +203,18 @@ func (d *poolDequeue) popHead() (any, bool) {
 
 ```go
 type poolChain struct {
-	// head 是生产者用来push的 poolDequeue。只有生产者访问，所以不需要同步
+	// head 是生产者用来push的 poolDequeue. 只有生产者访问，所以不需要同步
 	head *poolChainElt
 
-	// tail 是消费者用来pop的 poolDequeue。消费者访问，所以需要原子操作
+	// tail 是消费者用来pop的 poolDequeue. 消费者访问，所以需要原子操作
 	tail atomic.Pointer[poolChainElt]
 }
 
 type poolChainElt struct {
 	poolDequeue
 
-	// next由生产者原子写入，消费者原子读取。它只能从nil转换为非nil。
-	// prev由消费者原子写入，生产者原子读取。它只能从非nil转换为nil。
+	// next由生产者原子写入，消费者原子读取. 它只能从nil转换为非nil. 
+	// prev由消费者原子写入，生产者原子读取. 它只能从非nil转换为nil. 
 	next, prev atomic.Pointer[poolChainElt]
 }
 ```

@@ -42,7 +42,7 @@ func (o *Once) doSlow(f func()) {
 * 查看 pprof 中进程中的 inuse_objects 数过多，gc mark 消耗⼤量 CPU
 * 查看 pprof 中进程中的 inuse_objects 数过多，进程 RSS 占⽤过⾼
 
-请求⽣命周期开始时，pool.Get，请求结束时，pool.Put。在 [fasthttp](https://github.com/valyala/fasthttp/blob/b433ecfcbda586cd6afb80f41ae45082959dfa91/server.go#L402) 中有⼤量应⽤
+请求⽣命周期开始时，pool.Get，请求结束时，pool.Put. 在 [fasthttp](https://github.com/valyala/fasthttp/blob/b433ecfcbda586cd6afb80f41ae45082959dfa91/server.go#L402) 中有⼤量应⽤
 
 **sync.Pool结构图解**
 
@@ -442,7 +442,7 @@ func goroutine2() {
 
 1. 有多个消费者,一个生产者,需要生产者来主动通知(close(chan))消费者数据的发送已经结束
 2. 一个消费者，多个生产者，通过添加一个额外的channel被消费者来通知所有生产者接收数据已经结束,停止生产,生产者在逻辑中要有判断
-3. M个接收者，N个发送者，其中任何一个说 "让我们结束游戏"，通知主持人关闭一个额外的信号通道。
+3. M个接收者，N个发送者，其中任何一个说 "让我们结束游戏"，通知主持人关闭一个额外的信号通道. 
 
 参考资料: <https://go101.org/article/channel-closing.html>
 
@@ -653,7 +653,7 @@ type workType struct {
 
 `False sharing`
 
-**因为 CPU 处理读写是以 cache line 为单位，所以在并发修改变量时，会⼀次性将其它 CPU core 中的 cache line invalidate 掉，导致未修改的内存上相邻的变量也需要同步，带来额外的性能负担。**
+**因为 CPU 处理读写是以 cache line 为单位，所以在并发修改变量时，会⼀次性将其它 CPU core 中的 cache line invalidate 掉，导致未修改的内存上相邻的变量也需要同步，带来额外的性能负担. **
 
 `True sharing`
 
@@ -661,13 +661,13 @@ type workType struct {
 
 `Happen-before`
 
-* 同⼀个 goroutine 内的逻辑有依赖的语句执⾏，满⾜顺序关系。
-* 编译器/CPU 可能对同⼀个 goroutine 中的语句执⾏进⾏打乱，以提⾼性能，但不能破坏其应⽤原有的逻辑。
-* 不同的 goroutine 观察到的共享变量的修改顺序可能不⼀样。
+* 同⼀个 goroutine 内的逻辑有依赖的语句执⾏，满⾜顺序关系. 
+* 编译器/CPU 可能对同⼀个 goroutine 中的语句执⾏进⾏打乱，以提⾼性能，但不能破坏其应⽤原有的逻辑. 
+* 不同的 goroutine 观察到的共享变量的修改顺序可能不⼀样. 
 
  **初始化：**
 
-* A pkg import B pkg，那么 B pkg 的 init 函数⼀定在 A pkg 的 init 函数之前执⾏。
+* A pkg import B pkg，那么 B pkg 的 init 函数⼀定在 A pkg 的 init 函数之前执⾏. 
 * Init 函数⼀定在 main.main 之前执⾏
 
  **Goroutine 创建：**
@@ -800,17 +800,17 @@ func writeGo(out chan<- int, idx int) {
 
  **总结 Happen-before**
 
- *本质是在⽤户不知道 memory barrier 概念和具体实现的前提下，能够按照官⽅提供的 happen-before 正确进⾏并发编程。*
+ *本质是在⽤户不知道 memory barrier 概念和具体实现的前提下，能够按照官⽅提供的 happen-before 正确进⾏并发编程. *
 
 `Memory barrier`
 
- **在并发编程中的 memory barrier 和 GC 中的 barrier 不是⼀回事。**
+ **在并发编程中的 memory barrier 和 GC 中的 barrier 不是⼀回事. **
 
  **Memory barrier 是为了防⽌各种类型的读写重排：**
   
   ![mm-6.png](https://s2.loli.net/2023/06/15/MrtpGQ6VEa7fSUc.png)
 
- **⽽ GC 中的 read/write barrier 则是指堆上指针修改之前插⼊的⼀⼩段代码。**
+ **⽽ GC 中的 read/write barrier 则是指堆上指针修改之前插⼊的⼀⼩段代码. **
 
 ## References
 

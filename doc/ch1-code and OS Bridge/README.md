@@ -18,8 +18,8 @@
 
  ![os_level.jpg](https://s2.loli.net/2023/06/12/NYtFMRH28yQAKI1.png)
 
-*Intel 64 有四个特权级别，不过实际上只⽤到了其中的两个：ring-0 和 ring-3。*
-*ring-1 ring-2本来计划是为驱动程序和 OS 服务⽤，不过流⾏的 OS 们都没有接受这个⽅案。*
+*Intel 64 有四个特权级别，不过实际上只⽤到了其中的两个：ring-0 和 ring-3. *
+*ring-1 ring-2本来计划是为驱动程序和 OS 服务⽤，不过流⾏的 OS 们都没有接受这个⽅案. *
 
 `什么是系统调⽤`
 
@@ -143,7 +143,7 @@ close(3)                                = 0
 * 使⽤脚本⽣成的⽂件，在 syscall package 中：<https://golang.org/src/syscall/zsyscall_linux_386.go>
 * 不对⽤户暴露的特殊 syscall，不受调度影响，在 runtime 中：<https://golang.org/src/runtime/sys_linux_amd64.s>
 
-**阻塞的系统调⽤需要修改 P 的状态：running -> syscall。这样在 sysmon 中才能发现这个 P 已经在 syscall 状态阻塞了**
+**阻塞的系统调⽤需要修改 P 的状态：running -> syscall. 这样在 sysmon 中才能发现这个 P 已经在 syscall 状态阻塞了**
 
  ![sys_call_2.png](https://s2.loli.net/2023/06/12/RqOy7aEDWmsb5iA.png)
 

@@ -6,4 +6,4 @@
 * [eBPF kprobe 浅尝](./4.md)
 * [eBPF fentry/fexit 初体验](./5.md)
 * [eBPF 跟踪 goroutine 状态的变化](./6.md)
-* [eBPF 跟踪 MySQL 慢查询](./7.md)
+* [eBPF 跟踪容器内部署的 MySQL 慢查询](./7.md)

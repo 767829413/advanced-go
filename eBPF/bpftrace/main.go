@@ -1,33 +1,38 @@
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-O2 -g -Wall -Werror" -target bpf --go-package tool -output-dir tool Tool uprobes_goroutine.c -- -I/usr/include/bpf -I/usr/include/linux
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-O2 -g -Wall -Werror" -target amd64 --go-package tool -output-dir tool Tool mysql_trace/mysql_trace.c -- -I/usr/include/bpf -I/usr/include/linux
 
 package main
 
 import (
-	"C"
 	"bytes"
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/767829413/advanced-go/eBPF/bpftrace/tool"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
-
-	"github.com/767829413/advanced-go/eBPF/uprobes/goroutineState"
-	"github.com/767829413/advanced-go/eBPF/uprobes/tool"
 )
 
-var pidTarget int
+// Event 对应 eBPF 程序中定义的 struct event
+type Event struct {
+	Pid     uint32    // 进程 ID
+	Tid     uint32    // 线程 ID
+	DeltaNs uint64    // 执行时间（纳秒）
+	Query   [256]byte // SQL 查询字符串，最大长度为 256 字节
+}
+
+// GetQuery 返回查询字符串，去除末尾的空字节
+func (e *Event) GetQuery() string {
+	return string(bytes.TrimRight(e.Query[:], "\x00"))
+}
 
 func main() {
-	// 解析命令行参数
-	flag.IntVar(&pidTarget, "pid", 0, "Target PID for filtering")
-	flag.Parse()
-
 	// Allow the current process to lock memory for eBPF resources.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatal(err)
@@ -46,30 +51,36 @@ func main() {
 	}
 	defer objs.Close()
 
-	// Open a uprobe for the runtime.casgstatus function.
+	// Open a uretprobe for the runtime.casgstatus function.
 	ex, err := link.OpenExecutable(
-		"/home/fangyuan/code/go/src/github.com/767829413/advanced-go/eBPF/uprobes/demo/main",
+		"/var/lib/docker/overlay2/270506fa70024c98a81543a6a274e9f03258f39471655b69fa22fce5fada6d13/merged/sbin/mysqld",
 	)
 	if err != nil {
 		log.Fatalf("opening executable: %v", err)
 	}
 
-	err = spec.RewriteConstants(map[string]interface{}{
-		"pid_target": uint32(pidTarget),
-	})
-	if err != nil {
-		log.Fatalf("rewriting constants: %v", err)
-	}
-
-	// up, err := ex.Uretprobe("runtime.casgstatus", objs.UprobeRuntimeCasgstatus, nil)
-	up, err := ex.Uprobe("runtime.casgstatus", objs.UprobeRuntimeCasgstatus, nil)
+	up, err := ex.Uprobe(
+		"_Z16dispatch_commandP3THDPK8COM_DATA19enum_server_command",
+		objs.UprobeMysqlDispatchCommand,
+		nil,
+	)
 	if err != nil {
 		log.Fatalf("creating uretprobe: %v", err)
 	}
 	defer up.Close()
 
+	upret, err := ex.Uretprobe(
+		"_Z16dispatch_commandP3THDPK8COM_DATA19enum_server_command",
+		objs.UretprobeMysqlDispatchCommand,
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("creating uretprobe: %v", err)
+	}
+	defer upret.Close()
+
 	// Open a ring buffer to receive events from the eBPF program.
-	rb, err := ringbuf.NewReader(objs.Rb)
+	rb, err := ringbuf.NewReader(objs.Events)
 	if err != nil {
 		log.Fatalf("opening ringbuf reader: %v", err)
 	}
@@ -79,21 +90,21 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	fmt.Println("Listening for events...")
+	fmt.Println("listening for events...")
 
 	// 读取 ring buffer 中的数据
 	go func() {
 		for {
 			// 读取事件
+			// 读取到的 `Event` 数据，打印出来，这样就可以看到慢查询 `SQL` 了
 			record, err := rb.Read()
 			if err != nil {
 				log.Printf("reading from ringbuf: %v", err)
 				return
 			}
 
-			// 将事件解析为 GoroutineExecuteData 结构
-
-			var data goroutineState.GoroutineExecuteData
+			// 将事件解析为 Event 结构
+			var data Event
 			err = binary.Read(bytes.NewReader(record.RawSample), binary.LittleEndian, &data)
 			if err != nil {
 				log.Printf("parsing event: %v", err)
@@ -101,8 +112,8 @@ func main() {
 			}
 
 			// 输出 goroutine 信息
-			fmt.Printf("TGID: %d, PID: %d, GoID: %d, OldState: %s, NewState： %s\n",
-				data.Tgid, data.Pid, data.Goid, data.OldState.String(), data.NewState.String())
+			fmt.Printf("PID: %d, TID: %d, Latency: %v, SQL: %s\n",
+				data.Pid, data.Tid, time.Duration(data.DeltaNs), data.GetQuery())
 		}
 	}()
 

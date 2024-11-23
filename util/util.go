@@ -296,3 +296,11 @@ func OpenEncrypt(appSecret string, params map[string]string) (string, error) {
 	var signature = fmt.Sprintf("%X", mac.Sum(nil))
 	return signature, nil
 }
+
+func If[T any](judge bool, valueA, valueB T) T {
+	if judge {
+		return valueA
+	} else {
+		return valueB
+	}
+}

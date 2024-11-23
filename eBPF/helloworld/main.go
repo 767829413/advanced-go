@@ -1,4 +1,4 @@
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go --go-package minimal -output-dir minimal Minimal hello.c -- -I/usr/include/bpf -I/usr/include/linux
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go --go-package tool -output-dir tool Tool mysql_trace/mysql_trace.c -- -I/usr/include/bpf -I/usr/include/linux
 package main
 
 import (

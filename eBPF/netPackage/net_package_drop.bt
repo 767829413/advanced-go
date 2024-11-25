@@ -1,0 +1,142 @@
+#!/usr/bin/env bpftrace
+
+#include <linux/skbuff.h>
+#include <linux/ip.h>
+#include <net/sock.h>
+
+BEGIN
+{
+  @reasons[0] = "SKB_DROP_REASON_NOT_SPECIFIED";
+  @reasons[1] = "SKB_DROP_REASON_NO_SOCKET";
+  @reasons[2] = "SKB_DROP_REASON_PKT_TOO_SMALL";
+  @reasons[3] = "SKB_DROP_REASON_TCP_CSUM";
+  @reasons[4] = "SKB_DROP_REASON_SOCKET_FILTER";
+  @reasons[5] = "SKB_DROP_REASON_UDP_CSUM";
+  @reasons[6] = "SKB_DROP_REASON_NETFILTER_DROP";
+  @reasons[7] = "SKB_DROP_REASON_OTHERHOST";
+  @reasons[8] = "SKB_DROP_REASON_IP_CSUM";
+  @reasons[9] = "SKB_DROP_REASON_IP_INHDR";
+  @reasons[10] = "SKB_DROP_REASON_IP_RPFILTER";
+  @reasons[11] = "SKB_DROP_REASON_UNICAST_IN_L2_MULTICAST";
+  @reasons[12] = "SKB_DROP_REASON_XFRM_POLICY";
+  @reasons[13] = "SKB_DROP_REASON_IP_NOPROTO";
+  @reasons[14] = "SKB_DROP_REASON_SOCKET_RCVBUFF";
+  @reasons[15] = "SKB_DROP_REASON_PROTO_MEM";
+  @reasons[16] = "SKB_DROP_REASON_TCP_MD5NOTFOUND";
+  @reasons[17] = "SKB_DROP_REASON_TCP_MD5UNEXPECTED";
+  @reasons[18] = "SKB_DROP_REASON_TCP_MD5FAILURE";
+  @reasons[19] = "SKB_DROP_REASON_SOCKET_BACKLOG";
+  @reasons[20] = "SKB_DROP_REASON_TCP_FLAGS";
+  @reasons[21] = "SKB_DROP_REASON_TCP_ZEROWINDOW";
+  @reasons[22] = "SKB_DROP_REASON_TCP_OLD_DATA";
+  @reasons[23] = "SKB_DROP_REASON_TCP_OVERWINDOW";
+  @reasons[24] = "SKB_DROP_REASON_TCP_OFOMERGE";
+  @reasons[25] = "SKB_DROP_REASON_TCP_RFC7323_PAWS";
+  @reasons[26] = "SKB_DROP_REASON_TCP_INVALID_SEQUENCE";
+  @reasons[27] = "SKB_DROP_REASON_TCP_RESET";
+  @reasons[28] = "SKB_DROP_REASON_TCP_INVALID_SYN";
+  @reasons[29] = "SKB_DROP_REASON_TCP_CLOSE";
+  @reasons[30] = "SKB_DROP_REASON_TCP_FASTOPEN_LISTEN_QUEUE_FULL";
+  @reasons[31] = "SKB_DROP_REASON_TCP_FASTOPEN_COOKIE_INVALID";
+  @reasons[32] = "SKB_DROP_REASON_TCP_FASTOPEN_SYN_NODATA";
+  @reasons[33] = "SKB_DROP_REASON_TCP_TOO_SHORT";
+  @reasons[34] = "SKB_DROP_REASON_IP_OUTNOROUTES";
+  @reasons[35] = "SKB_DROP_REASON_BPF_CGROUP_EGRESS";
+  @reasons[36] = "SKB_DROP_REASON_IPV6DISABLED";
+  @reasons[37] = "SKB_DROP_REASON_NEIGH_CREATEFAIL";
+  @reasons[38] = "SKB_DROP_REASON_NEIGH_FAILED";
+  @reasons[39] = "SKB_DROP_REASON_NEIGH_QUEUEFULL";
+  @reasons[40] = "SKB_DROP_REASON_NEIGH_DEAD";
+  @reasons[41] = "SKB_DROP_REASON_TC_EGRESS";
+  @reasons[42] = "SKB_DROP_REASON_QDISC_DROP";
+  @reasons[43] = "SKB_DROP_REASON_CPU_BACKLOG";
+  @reasons[44] = "SKB_DROP_REASON_XDP";
+  @reasons[45] = "SKB_DROP_REASON_TC_INGRESS";
+  @reasons[46] = "SKB_DROP_REASON_UNHANDLED_PROTO";
+  @reasons[47] = "SKB_DROP_REASON_SKB_CSUM";
+  @reasons[48] = "SKB_DROP_REASON_SKB_GSO_SEG";
+  @reasons[49] = "SKB_DROP_REASON_SKB_UCOPY_FAULT";
+  @reasons[50] = "SKB_DROP_REASON_DEV_HDR";
+  @reasons[51] = "SKB_DROP_REASON_DEV_READY";
+  @reasons[52] = "SKB_DROP_REASON_FULL_RING";
+  @reasons[53] = "SKB_DROP_REASON_NOMEM";
+  @reasons[54] = "SKB_DROP_REASON_HDR_TRUNC";
+  @reasons[55] = "SKB_DROP_REASON_TAP_FILTER";
+  @reasons[56] = "SKB_DROP_REASON_TAP_TXFILTER";
+  @reasons[57] = "SKB_DROP_REASON_ICMP_CSUM";
+  @reasons[58] = "SKB_DROP_REASON_INVALID_PROTO";
+  @reasons[59] = "SKB_DROP_REASON_IP_INADDRERRORS";
+  @reasons[60] = "SKB_DROP_REASON_IP_INNOROUTES";
+  @reasons[61] = "SKB_DROP_REASON_PKT_TOO_BIG";
+  @reasons[62] = "SKB_DROP_REASON_MAX";
+  @protocols[1] = "ICMP";
+  @protocols[2] = "IGMP";
+  @protocols[4] = "IP";
+  @protocols[6] = "TCP";
+  @protocols[17] = "UDP";
+  @protocols[41] = "IPv6";
+  @protocols[89] = "OSPF";
+  @protocols[132] = "SCTP";
+  printf("Tracing Packet drops. Hit Ctrl-C to end.\n");
+  printf("%-8s %-8s %-16s %-10s %-16s %-21s %-21s\n", "TIME", "PID", "COMM", "IP_PROTO", "REASON", "SADDR:SPORT", "DADDR:DPORT");
+}
+
+kprobe:kfree_skb_reason
+{
+    // 获取当前的进程ID和释放原因
+    $pid = pid;
+    // 获取第二个参数，也就是包丢弃的原因
+    $reason = arg1;
+
+    // 排除特定的 reason
+    if ($reason <= 2 || $reason >= 42) {
+        // 跳过这些 PID
+        return;
+    }
+
+    // 将 reason 转换为字符串，这些省略了很堵枚举类型，你根据Linux内核的版本自行添加即可
+    // 使用映射获取原因字符串
+    $reason_str = @reasons[$reason];
+    if ($reason_str == "") {
+        $reason_str = "UNKNOWN";
+    }
+
+    // 获取skb指针
+    $skb = (struct sk_buff *)arg0;
+    $sk = ((struct sock *) $skb->sk);
+    $inet_family = $sk->__sk_common.skc_family;
+
+    // 获取IP层的源地址、目的地址、源端口和目的端口
+    if ($inet_family == AF_INET) {
+      $daddr = ntop($sk->__sk_common.skc_daddr);
+      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+    } else {
+      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+    }
+    $lport = $sk->__sk_common.skc_num;
+    $dport = $sk->__sk_common.skc_dport;
+
+    // 目的端口是大端序，需要转成小端序
+    $dport = bswap($dport);
+
+
+    // 提取协议信息
+    $ipheader = ((struct iphdr *) ($skb->head + $skb->network_header));
+    $version = ($ipheader->version) >>4;
+
+    // 将协议号转换为字符串
+    $protocol_str = @protocols[$ipheader->protocol];
+    if ($protocol_str == "") {
+        $protocol_str = "UNKNOWN";
+    }
+
+
+    // 输出时间和各字段的值
+    time("%H:%M:%S ");
+    printf("%-8d %-16s %-10s %-16s ", pid, comm, $protocol_str, $reason_str);
+    printf("%15s:%-6d %15s:%-6d\n", $saddr, $lport, $daddr, $dport);
+
+    // 打印出当前的栈信息，方便查看丢包的栈调用情况
+    printf("%s\n", kstack);
+}

@@ -18,13 +18,24 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	numTabs := 10
+	numTabs := 4714     // 设置总上传数
+	maxConcurrent := 10 // 设置最大并发数
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3600*time.Second)
 	defer cancel()
+
+	// 创建一个带缓冲的通道来控制并发
+	semaphore := make(chan struct{}, maxConcurrent)
+
 	for i := 0; i < numTabs; i++ {
 		wg.Add(1)
 		go func(tabIndex int) {
 			defer wg.Done()
+
+			// 获取信号量
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }() // 释放信号量
+
 			// 为每个标签页创建新的上下文
 			tabCtx, cancel := chromedp.NewContext(ctx)
 			defer cancel()

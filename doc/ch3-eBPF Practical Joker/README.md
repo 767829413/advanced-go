@@ -8,3 +8,4 @@
 * [eBPF 跟踪 goroutine 状态的变化](./6.md)
 * [eBPF 跟踪容器内部署的 MySQL 慢查询](./7.md)
 * [eBPF 跟踪网络包的踪迹](./8.md)
+* [eBPF bpftrace 使用指北](./9.md)

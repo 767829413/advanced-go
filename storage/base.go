@@ -125,4 +125,6 @@ type StorageConfig struct {
 	CdnProtocol      string   `json:"cdnProtocol"`
 	Path             []string `json:"path"`
 	TmpPath          []string `json:"tmpPath"`
+	Username         string   `json:"username"`
+	Password         string   `json:"password"`
 }

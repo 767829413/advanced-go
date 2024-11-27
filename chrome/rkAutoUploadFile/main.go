@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,21 +17,10 @@ import (
 )
 
 func main() {
-	// 创建基础Chrome上下文
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("disable-sync", false),
-		chromedp.Flag("headless", true),
-	)
-	ctx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	// 创建浏览器实例
-	// ctx, cancel = chromedp.NewContext(ctx)
-	// defer cancel()
-
 	var wg sync.WaitGroup
 	numTabs := 10
-
+	ctx, cancel := context.WithTimeout(context.Background(), 3600*time.Second)
+	defer cancel()
 	for i := 0; i < numTabs; i++ {
 		wg.Add(1)
 		go func(tabIndex int) {
@@ -55,12 +45,12 @@ func uploadInTab(ctx context.Context, tabIndex int) {
 		chromedp.Flag("disable-sync", false),
 		chromedp.Flag("headless", false), // 设置为false以禁用无头模式,方便调试
 	)
-	ctx, cancel := context.WithTimeout(ctx, 3600*time.Second)
-	defer cancel()
 	ctx, cancelChrome := chromedp.NewExecAllocator(ctx, opts...)
 	defer cancelChrome()
 
-	ctx, cancelTab := chromedp.NewContext(ctx)
+	// 自定义日志打印
+	customLogger := &filteredLogger{log.Default()}
+	ctx, cancelTab := chromedp.NewContext(ctx, chromedp.WithLogf(customLogger.Printf))
 	defer cancelTab()
 
 	// 设置退出机制
@@ -257,4 +247,15 @@ func uploadInTab(ctx context.Context, tabIndex int) {
 	log.Println("上传成功")
 
 	log.Printf("标签页 %d: 上传完成", tabIndex)
+}
+
+type filteredLogger struct {
+	*log.Logger
+}
+
+func (l *filteredLogger) Printf(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
+	if !strings.Contains(msg, "unhandled node event *dom.EventScrollableFlagUpdated") {
+		l.Logger.Printf(format, v...)
+	}
 }

@@ -2,13 +2,14 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
-	"github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/credentials"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 var (
@@ -37,11 +38,17 @@ func initMinioClient() {
 
 func TestGetObject(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestGetObject", []byte("这是什么东西"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestGetObject",
+		[]byte("这是什么东西"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestGetObject")
+	data, err := minioHelper.GetObject(context.Background(), configMinio.Bucket, "TestGetObject")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +57,7 @@ func TestGetObject(t *testing.T) {
 
 func TestGetFile(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.GetFile(configMinio.Bucket, "12344.png", "./test.png")
+	err := minioHelper.GetFile(context.Background(), configMinio.Bucket, "12344.png", "./test.png")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,11 +65,17 @@ func TestGetFile(t *testing.T) {
 
 func TestPutObject(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestPutObject", []byte("这是谁的部下"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestPutObject",
+		[]byte("这是谁的部下"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestPutObject")
+	data, err := minioHelper.GetObject(context.Background(), configMinio.Bucket, "TestPutObject")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +89,7 @@ func TestPutObjectWithMeta(t *testing.T) {
 		ContentDisposition: "TestPutObjectWithMeta",
 	}
 	err := minioHelper.PutObjectWithMeta(
+		context.Background(),
 		configMinio.Bucket,
 		"PutObjectWithMeta",
 		[]byte("吾乃长山赵子龙"),
@@ -84,7 +98,11 @@ func TestPutObjectWithMeta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "PutObjectWithMeta")
+	data, err := minioHelper.GetObject(
+		context.Background(),
+		configMinio.Bucket,
+		"PutObjectWithMeta",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,11 +111,17 @@ func TestPutObjectWithMeta(t *testing.T) {
 
 func TestPutFile(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutFile(configMinio.Bucket, "TestPutFile", sourceMinioLocalTestFile, nil)
+	err := minioHelper.PutFile(
+		context.Background(),
+		configMinio.Bucket,
+		"TestPutFile",
+		sourceMinioLocalTestFile,
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestPutFile")
+	data, err := minioHelper.GetObject(context.Background(), configMinio.Bucket, "TestPutFile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,12 +135,17 @@ func TestPutFileWithMeta(t *testing.T) {
 		ContentDisposition: "TestPutFileWithMeta",
 	}
 	minioHelper.PutFileWithMeta(
+		context.Background(),
 		configMinio.Bucket,
 		"TestPutFileWithMeta",
 		sourceMinioLocalTestFile,
 		metadata,
 	)
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestPutFileWithMeta")
+	data, err := minioHelper.GetObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestPutFileWithMeta",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +164,7 @@ func TestPutFileWithPart(t *testing.T) {
 	partSize := int64(128 * MiB)
 	// 测试文件大小为 5.3G
 	err := minioHelper.PutFileWithPart(
+		context.Background(),
 		configMinio.Bucket,
 		"test_vedio.iso",
 		"/home/fangyuan/下载/bak/Win10_22H2_China_GGK_Chinese_Simplified_x64.iso",
@@ -148,7 +178,7 @@ func TestPutFileWithPart(t *testing.T) {
 
 func TestListObjects(t *testing.T) {
 	initMinioClient()
-	datas, err := minioHelper.ListObjects(configMinio.Bucket, "zppt10401")
+	datas, err := minioHelper.ListObjects(context.Background(), configMinio.Bucket, "zppt10401")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,20 +189,26 @@ func TestListObjects(t *testing.T) {
 
 func TestDeleteObject(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestDeleteObject", []byte("这是什么东西"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestDeleteObject",
+		[]byte("这是什么东西"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestDeleteObject")
+	data, err := minioHelper.GetObject(context.Background(), configMinio.Bucket, "TestDeleteObject")
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
-	err = minioHelper.DeleteObject(configMinio.Bucket, "TestDeleteObject")
+	err = minioHelper.DeleteObject(context.Background(), configMinio.Bucket, "TestDeleteObject")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = minioHelper.GetObject(configMinio.Bucket, "TestDeleteObject")
+	_, err = minioHelper.GetObject(context.Background(), configMinio.Bucket, "TestDeleteObject")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -187,7 +223,11 @@ func TestBatchDeleteObject(t *testing.T) {
 		"TestPutFileWithMeta",
 		"TestPutObject",
 	}
-	successFiles, err := minioHelper.BatchDeleteObject(configMinio.Bucket, fileList)
+	successFiles, err := minioHelper.BatchDeleteObject(
+		context.Background(),
+		configMinio.Bucket,
+		fileList,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,15 +238,30 @@ func TestBatchDeleteObject(t *testing.T) {
 
 func TestCopyObject(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestCopyObject", []byte("这是什么东西"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestCopyObject",
+		[]byte("这是什么东西"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = minioHelper.CopyObject(configMinio.Bucket, "TestCopyObject", "TestCopyObject_COPY")
+	err = minioHelper.CopyObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestCopyObject",
+		"TestCopyObject_COPY",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := minioHelper.GetObject(configMinio.Bucket, "TestCopyObject_COPY")
+	data, err := minioHelper.GetObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestCopyObject_COPY",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,22 +270,36 @@ func TestCopyObject(t *testing.T) {
 
 func TestIsObjectExist(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestIsObjectExist", []byte("这是什么东西"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestIsObjectExist",
+		[]byte("这是什么东西"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	isObjectExist, err := minioHelper.IsObjectExist(configMinio.Bucket, "TestIsObjectExist")
+	isObjectExist, err := minioHelper.IsObjectExist(
+		context.Background(),
+		configMinio.Bucket,
+		"TestIsObjectExist",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if isObjectExist {
 		t.Log("TestIsObjectExist: 存在")
 	}
-	err = minioHelper.DeleteObject(configMinio.Bucket, "TestIsObjectExist")
+	err = minioHelper.DeleteObject(context.Background(), configMinio.Bucket, "TestIsObjectExist")
 	if err != nil {
 		t.Fatal(err)
 	}
-	isObjectExist, err = minioHelper.IsObjectExist(configMinio.Bucket, "TestIsObjectExist")
+	isObjectExist, err = minioHelper.IsObjectExist(
+		context.Background(),
+		configMinio.Bucket,
+		"TestIsObjectExist",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,21 +311,35 @@ func TestIsObjectExist(t *testing.T) {
 // 过期时间:秒
 func TestSignFileForDownload(t *testing.T) {
 	initMinioClient()
-	downloadUrl := minioHelper.SignFileForDownload(
+	downloadUrl, err := minioHelper.SignFileForDownload(
+		context.Background(),
 		"zppt10401/zppt10401.pptx",
 		3600,
 		"爱多福多寿.pptx",
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("downloadUrl: %s", downloadUrl)
 }
 
 func TestGetObjectMeta(t *testing.T) {
 	initMinioClient()
-	err := minioHelper.PutObject(configMinio.Bucket, "TestGetObjectMeta", []byte("这是什么东西"), nil)
+	err := minioHelper.PutObject(
+		context.Background(),
+		configMinio.Bucket,
+		"TestGetObjectMeta",
+		[]byte("这是什么东西"),
+		nil,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	content, err := minioHelper.GetObjectMeta(configMinio.Bucket, "TestGetObjectMeta")
+	content, err := minioHelper.GetObjectMeta(
+		context.Background(),
+		configMinio.Bucket,
+		"TestGetObjectMeta",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,13 +348,24 @@ func TestGetObjectMeta(t *testing.T) {
 
 func TestSignFile(t *testing.T) {
 	initMinioClient()
-	url := minioHelper.SignFile("zppt10401/zppt10401_s.jpg", 3600)
+	url, err := minioHelper.SignFile(context.Background(), "zppt10401/zppt10401_s.jpg", 3600)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("url: %s", url)
 }
 
 func TestSignFile2(t *testing.T) {
 	initMinioClient()
-	url := minioHelper.SignFile2(configMinio.Bucket, "zppt10401/zppt10401_s.jpg", 3600)
+	url, err := minioHelper.SignFile2(
+		context.Background(),
+		configMinio.Bucket,
+		"zppt10401/zppt10401_s.jpg",
+		3600,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("url: %s", url)
 }
 
@@ -280,24 +374,26 @@ func TestSignFile2(t *testing.T) {
 // GetDirToken,GetDirTokenWithAction都是依赖使用GetDirToken2实现,就不统一测试了
 func TestGetDirToken2(t *testing.T) {
 	initMinioClient()
-	token, err := minioHelper.GetDirToken2("tmp-file")
+	token, err := minioHelper.GetDirToken2(context.Background(), "tmp-file")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	creds := credentials.NewStaticV4(token.AccessKeyID, token.AccessKeySecret, token.StsToken)
 	// Use generated credentials to authenticate with MinIO server
-	minioClient, err := minio.NewWithCredentials(
+	minioClient, err := minio.New(
 		configMinio.Endpoint,
-		creds,
-		false,
-		"",
+		&minio.Options{
+			Creds:  creds,
+			Secure: false,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	data := []byte("TestGetDirToken2\nTestGetDirToken2")
 	_, err = minioClient.PutObject(
+		context.Background(),
 		configMinio.Bucket,
 		"tmp-file/TestCopyObject",
 		bytes.NewBuffer(data),
@@ -312,8 +408,14 @@ func TestGetDirToken2(t *testing.T) {
 		"Calling list objects on bucket named `%s` with temp creds:\n===\n",
 		configMinio.Bucket,
 	)
-	doneCh := make(chan struct{})
-	objCh := minioClient.ListObjects(configMinio.Bucket, "", true, doneCh)
+	objCh := minioClient.ListObjects(
+		context.Background(),
+		configMinio.Bucket,
+		minio.ListObjectsOptions{
+			Prefix:    "",
+			Recursive: true,
+		},
+	)
 	for obj := range objCh {
 		if obj.Err != nil {
 			t.Fatalf("Listing error: %v", obj.Err)

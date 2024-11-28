@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,8 +12,8 @@ import (
 
 	"github.com/767829413/advanced-go/util"
 
-	"github.com/minio/minio-go/v6"
-	"github.com/minio/minio-go/v6/pkg/credentials"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 const (
@@ -27,20 +28,19 @@ type minioStorage struct {
 
 func newMinioStorager(c *StorageConfig) (*minioStorage, error) {
 	endpoint := util.If(c.Internal, c.EndpointInternal, c.Endpoint)
-	client, err := minio.New(
-		endpoint,
-		c.AccessKeyId,
-		c.AccessKeySecret,
-		false,
-	)
+	// Initialize minio client object.
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(c.AccessKeyId, c.AccessKeySecret, ""),
+		Secure: false,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return &minioStorage{config: c, client: client}, nil
 }
 
-func (m *minioStorage) GetObject(bucket string, key string) ([]byte, error) {
-	obj, err := m.client.GetObject(bucket, key, minio.GetObjectOptions{})
+func (m *minioStorage) GetObject(ctx context.Context, bucket string, key string) ([]byte, error) {
+	obj, err := m.client.GetObject(ctx, bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,14 @@ func (m *minioStorage) GetObject(bucket string, key string) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func (m *minioStorage) GetFile(bucket string, key string, localFile string) error {
+func (m *minioStorage) GetFile(
+	ctx context.Context,
+	bucket string,
+	key string,
+	localFile string,
+) error {
 	return m.client.FGetObject(
+		ctx,
 		bucket,
 		key,
 		localFile,
@@ -60,6 +66,7 @@ func (m *minioStorage) GetFile(bucket string, key string, localFile string) erro
 }
 
 func (m *minioStorage) PutObject(
+	ctx context.Context,
 	bucket string,
 	key string,
 	data []byte,
@@ -70,6 +77,7 @@ func (m *minioStorage) PutObject(
 		return err
 	}
 	_, err = m.client.PutObject(
+		ctx,
 		bucket,
 		key,
 		bytes.NewBuffer(data),
@@ -80,12 +88,14 @@ func (m *minioStorage) PutObject(
 }
 
 func (m *minioStorage) PutObjectWithMeta(
+	ctx context.Context,
 	bucket string,
 	key string,
 	data []byte,
 	metadata *Metadata,
 ) error {
 	_, err := m.client.PutObject(
+		ctx,
 		bucket,
 		key,
 		bytes.NewBuffer(data),
@@ -96,6 +106,7 @@ func (m *minioStorage) PutObjectWithMeta(
 }
 
 func (m *minioStorage) PutFile(
+	ctx context.Context,
 	bucket string,
 	key string,
 	localFile string,
@@ -106,6 +117,7 @@ func (m *minioStorage) PutFile(
 		return err
 	}
 	_, err = m.client.FPutObject(
+		ctx,
 		bucket,
 		key,
 		localFile,
@@ -115,12 +127,14 @@ func (m *minioStorage) PutFile(
 }
 
 func (m *minioStorage) PutFileWithMeta(
+	ctx context.Context,
 	bucket string,
 	key string,
 	srcFile string,
 	metadata *Metadata,
 ) error {
 	_, err := m.client.FPutObject(
+		ctx,
 		bucket,
 		key,
 		srcFile,
@@ -130,6 +144,7 @@ func (m *minioStorage) PutFileWithMeta(
 }
 
 func (m *minioStorage) PutObjectFromFile(
+	ctx context.Context,
 	bucket string,
 	key string,
 	localFile string,
@@ -140,7 +155,7 @@ func (m *minioStorage) PutObjectFromFile(
 		return err
 	}
 	// 使用FPutObject上传文件
-	_, err = m.client.FPutObject(bucket, key, localFile, opt)
+	_, err = m.client.FPutObject(ctx, bucket, key, localFile, opt)
 	if err != nil {
 		return fmt.Errorf("failed to put object from file: %w", err)
 	}
@@ -149,6 +164,7 @@ func (m *minioStorage) PutObjectFromFile(
 
 // 在单个 PUT 操作中上传小于 128MiB 的对象。对于大于 128MiB 的对象，PutObject 会根据实际文件大小将对象无缝上传为 128MiB 或更大的部分。对象的最大上传大小为 5TB
 func (m *minioStorage) PutFileWithPart(
+	ctx context.Context,
 	bucket string,
 	key string,
 	srcFile string,
@@ -170,6 +186,7 @@ func (m *minioStorage) PutFileWithPart(
 	// 这里是直接覆盖
 	putOpt.ContentType = "application/octet-stream"
 	_, err = m.client.PutObject(
+		ctx,
 		bucket,
 		key,
 		file,
@@ -182,12 +199,19 @@ func (m *minioStorage) PutFileWithPart(
 	return nil
 }
 
-func (m *minioStorage) ListObjects(bucket string, prefix string) ([]Content, error) {
+func (m *minioStorage) ListObjects(
+	ctx context.Context,
+	bucket string,
+	prefix string,
+) ([]Content, error) {
 	res := make([]Content, 0, 32)
-	doneCh := make(chan struct{})
-	defer close(doneCh)
+	objectCh := m.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	})
+
 	// List all objects from a bucket-name with a matching prefix.
-	for object := range m.client.ListObjectsV2(bucket, prefix, true, doneCh) {
+	for object := range objectCh {
 		if object.Err != nil {
 			return res, object.Err
 		}
@@ -200,11 +224,17 @@ func (m *minioStorage) ListObjects(bucket string, prefix string) ([]Content, err
 	return res, nil
 }
 
-func (m *minioStorage) DeleteObject(bucket string, key string) error {
-	return m.client.RemoveObject(bucket, key)
+func (m *minioStorage) DeleteObject(ctx context.Context, bucket string, key string) error {
+	return m.client.RemoveObject(
+		ctx,
+		bucket,
+		key,
+		minio.RemoveObjectOptions{GovernanceBypass: true},
+	)
 }
 
 func (m *minioStorage) BatchDeleteObject(
+	ctx context.Context,
 	bucket string,
 	filelist []string,
 ) (successList []string, err error) {
@@ -220,19 +250,21 @@ func (m *minioStorage) BatchDeleteObject(
 		toDelFileList := filelist[:splitPos]
 		filelist = filelist[splitPos:]
 
-		objectsCh := make(chan string)
+		objectsCh := make(chan minio.ObjectInfo)
 
 		// 发送对象以供删除
 		go func() {
 			defer close(objectsCh)
 			for _, object := range toDelFileList {
-				objectsCh <- object
+				objectsCh <- minio.ObjectInfo{
+					Key: object,
+				}
 			}
 		}()
 
 		// 执行批量删除
 		fmt.Println("Deleting objects...")
-		for err := range m.client.RemoveObjects(bucket, objectsCh) {
+		for err := range m.client.RemoveObjects(ctx, bucket, objectsCh, minio.RemoveObjectsOptions{GovernanceBypass: true}) {
 			if err.Err != nil {
 				fmt.Printf("Error detected during deletion: %v\n", err)
 			}
@@ -244,17 +276,27 @@ func (m *minioStorage) BatchDeleteObject(
 	return successList, nil
 }
 
-func (m *minioStorage) CopyObject(bucket string, srcKey string, destKey string) error {
+func (m *minioStorage) CopyObject(
+	ctx context.Context,
+	bucket string,
+	srcKey string,
+	destKey string,
+) error {
 	// Source object
-	srcOpts := minio.NewSourceInfo(bucket, srcKey, nil)
+	srcOpts := minio.CopySrcOptions{
+		Bucket: bucket,
+		Object: srcKey,
+	}
 
 	// Destination object
-	dstOpts, err := minio.NewDestinationInfo(bucket, destKey, nil, nil)
-	if err != nil {
-		return err
+	dstOpts := minio.CopyDestOptions{
+		Bucket: bucket,
+		Object: destKey,
 	}
+
 	// Copy object call
-	if err := m.client.CopyObject(dstOpts, srcOpts); err != nil {
+	_, err := m.client.CopyObject(ctx, dstOpts, srcOpts)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -270,8 +312,8 @@ func (m *minioStorage) SetObjectMetaData(bucket string, key string, metadata *Me
 	return nil
 }
 
-func (m *minioStorage) IsObjectExist(bucket string, key string) (bool, error) {
-	res, err := m.GetObjectMeta(bucket, key)
+func (m *minioStorage) IsObjectExist(ctx context.Context, bucket string, key string) (bool, error) {
+	res, err := m.GetObjectMeta(ctx, bucket, key)
 	switch err := err.(type) {
 	case minio.ErrorResponse:
 		if err.Code == "NoSuchKey" {
@@ -285,32 +327,42 @@ func (m *minioStorage) IsObjectExist(bucket string, key string) (bool, error) {
 
 }
 
-func (m *minioStorage) SignFile(remoteDir string, expiredTime int64) string {
-	return m.SignFile2(m.config.Bucket, remoteDir, expiredTime)
+func (m *minioStorage) SignFile(
+	ctx context.Context,
+	remoteDir string,
+	expiredTime int64,
+) (string, error) {
+	return m.SignFile2(ctx, m.config.Bucket, remoteDir, expiredTime)
 }
 
-func (m *minioStorage) SignFile2(bucket, remoteDir string, expiredTime int64) string {
+func (m *minioStorage) SignFile2(
+	ctx context.Context,
+	bucket, remoteDir string,
+	expiredTime int64,
+) (string, error) {
 	// Set request parameters for content-disposition.
 	reqParams := make(url.Values)
 	// Generates a presigned url which expires in a day.
 	presignedURL, err := m.client.PresignedGetObject(
+		ctx,
 		bucket,
 		remoteDir,
 		time.Duration(expiredTime)*time.Second,
 		reqParams,
 	)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return presignedURL.String()
+	return presignedURL.String(), nil
 }
 
 // 过期时间:秒
 func (m *minioStorage) SignFileForDownload(
+	ctx context.Context,
 	remoteFilePath string,
 	expiredTime int64,
 	downLoadFilename string,
-) string {
+) (string, error) {
 	// Set request parameters for content-disposition.
 	reqParams := make(url.Values)
 	reqParams.Set(
@@ -320,19 +372,24 @@ func (m *minioStorage) SignFileForDownload(
 
 	// Generates a presigned url which expires in a day.
 	presignedURL, err := m.client.PresignedGetObject(
+		ctx,
 		m.config.Bucket,
 		remoteFilePath,
 		time.Duration(expiredTime)*time.Second,
 		reqParams,
 	)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return presignedURL.String()
+	return presignedURL.String(), nil
 }
 
-func (m *minioStorage) GetObjectMeta(bucket string, key string) (*Content, error) {
-	objInfo, err := m.client.StatObject(bucket, key, minio.StatObjectOptions{})
+func (m *minioStorage) GetObjectMeta(
+	ctx context.Context,
+	bucket string,
+	key string,
+) (*Content, error) {
+	objInfo, err := m.client.StatObject(ctx, bucket, key, minio.StatObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +399,7 @@ func (m *minioStorage) GetObjectMeta(bucket string, key string) (*Content, error
 // 获取临时token
 // https://github.com/minio/minio/blob/master/docs/sts/assume-role.md
 // 使用了minio的账号密码实现,相当于最大权限
-func (m *minioStorage) GetDirToken2(remoteDir string) (*StorageToken, error) {
+func (m *minioStorage) GetDirToken2(ctx context.Context, remoteDir string) (*StorageToken, error) {
 	expires := 6 * 3600 * time.Second
 	expireDeadLine := time.Now().Add(expires)
 	// Initialize credential options
@@ -374,8 +431,8 @@ func (m *minioStorage) GetDirToken2(remoteDir string) (*StorageToken, error) {
 	}, nil
 }
 
-func (m *minioStorage) GetDirToken(remoteDir string) (map[string]any, error) {
-	t, err := m.GetDirToken2(remoteDir)
+func (m *minioStorage) GetDirToken(ctx context.Context, remoteDir string) (map[string]any, error) {
+	t, err := m.GetDirToken2(ctx, remoteDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dir token: %w", err)
 	}
@@ -398,10 +455,11 @@ func (m *minioStorage) GetDirToken(remoteDir string) (map[string]any, error) {
 }
 
 func (m *minioStorage) GetDirTokenWithAction(
+	ctx context.Context,
 	remoteDir string,
 	actions ...Action,
 ) (bool, *StorageToken) {
-	t, err := m.GetDirToken2(remoteDir)
+	t, err := m.GetDirToken2(ctx, remoteDir)
 	if err != nil {
 		return false, nil
 	}

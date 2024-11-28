@@ -1,24 +1,58 @@
 package storage
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Storage interface {
-	GetObject(bucket string, key string) ([]byte, error)
+	GetObject(ctx context.Context, bucket string, key string) ([]byte, error)
 
-	GetFile(bucket string, key string, localFile string) error
+	GetFile(ctx context.Context, bucket string, key string, localFile string) error
 
-	PutObject(bucket string, key string, data []byte, metadata map[string]string) error
+	PutObject(
+		ctx context.Context,
+		bucket string,
+		key string,
+		data []byte,
+		metadata map[string]string,
+	) error
 
-	PutObjectWithMeta(bucket string, key string, data []byte, metadata *Metadata) error
+	PutObjectWithMeta(
+		ctx context.Context,
+		bucket string,
+		key string,
+		data []byte,
+		metadata *Metadata,
+	) error
 
-	PutFile(bucket string, key string, srcFile string, metadata map[string]string) error
+	PutFile(
+		ctx context.Context,
+		bucket string,
+		key string,
+		srcFile string,
+		metadata map[string]string,
+	) error
 
-	PutObjectFromFile(bucket string, key string, filePath string, metadata map[string]string) error
+	PutObjectFromFile(
+		ctx context.Context,
+		bucket string,
+		key string,
+		filePath string,
+		metadata map[string]string,
+	) error
 
-	PutFileWithMeta(bucket string, key string, srcFile string, metadata *Metadata) error
+	PutFileWithMeta(
+		ctx context.Context,
+		bucket string,
+		key string,
+		srcFile string,
+		metadata *Metadata,
+	) error
 
 	// 大文件 断点续传  分片数量不能超过10000,分片大小推荐  100K-1G partSize单位KB
 	PutFileWithPart(
+		ctx context.Context,
 		bucket string,
 		key string,
 		srcFile string,
@@ -26,41 +60,54 @@ type Storage interface {
 		partSize int64,
 	) error
 
-	ListObjects(bucket string, prefix string) ([]Content, error)
+	ListObjects(ctx context.Context, bucket string, prefix string) ([]Content, error)
 
-	DeleteObject(bucket string, key string) error
+	DeleteObject(ctx context.Context, bucket string, key string) error
 
-	CopyObject(bucket string, srcKey string, destKey string) error
+	CopyObject(ctx context.Context, bucket string, srcKey string, destKey string) error
 
-	SetObjectAcl(bucket string, key string, acl StorageAcl) error
+	SetObjectAcl(ctx context.Context, bucket string, key string, acl StorageAcl) error
 
-	SetObjectMetaData(bucket string, key string, metadata *Metadata) error
+	SetObjectMetaData(ctx context.Context, bucket string, key string, metadata *Metadata) error
 
-	IsObjectExist(bucket string, key string) (bool, error)
+	IsObjectExist(ctx context.Context, bucket string, key string) (bool, error)
 
-	GetDirToken(remoteDir string) map[string]interface{}
+	GetDirToken(ctx context.Context, remoteDir string) (map[string]interface{}, error)
 
-	GetDirToken2(remoteDir string) *StorageToken
+	GetDirToken2(ctx context.Context, remoteDir string) (*StorageToken, error)
 
-	GetDirTokenWithAction(remoteDir string, actions ...Action) (bool, *StorageToken)
+	GetDirTokenWithAction(
+		ctx context.Context,
+		remoteDir string,
+		actions ...Action,
+	) (bool, *StorageToken)
 	//过期时间：秒
-	SignFile(remoteDir string, expiredTime int64) string
+	SignFile(ctx context.Context, remoteDir string, expiredTime int64) (string, error)
 
 	//过期时间：秒
-	SignFile2(bucket, remoteDir string, expiredTime int64) string
+	SignFile2(ctx context.Context, bucket, remoteDir string, expiredTime int64) (string, error)
 
 	//过期时间：秒
-	SignFileForDownload(remoteDir string, expiredTime int64, downloadName string) string
+	SignFileForDownload(
+		ctx context.Context,
+		remoteDir string,
+		expiredTime int64,
+		downloadName string,
+	) (string, error)
 
-	GetObjectMeta(bucket string, key string) (*Content, error)
+	GetObjectMeta(ctx context.Context, bucket string, key string) (*Content, error)
 	//解冻归档文件，成功就为true,异常或者失败返回false
-	RestoreArchive(bucket string, key string) (bool, error)
+	RestoreArchive(ctx context.Context, bucket string, key string) (bool, error)
 
 	//判断是否归档文件
-	IsArchive(bucket string, key string) (bool, error)
+	IsArchive(ctx context.Context, bucket string, key string) (bool, error)
 
 	//批量删除文件；可以减少调用次数，进而减少费用
-	BatchDeleteObject(bucketName string, list []string) (successList []string, e error)
+	BatchDeleteObject(
+		ctx context.Context,
+		bucketName string,
+		list []string,
+	) (successList []string, e error)
 }
 
 // listObject结果对象

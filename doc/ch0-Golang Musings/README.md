@@ -10,3 +10,5 @@
 * [Golang 1.23 unique package](./New%20package%20Unique.md)
 * [Golang 生产者消费者模式杂谈之SPMC](./Go%20SPMC.md)
 * [Golang 结构体私有字段修改](./Golang%20Structure%20Private%20Field%20Modification.md)
+* [Golang 运行时调度杂谈之runq](./Go%20RUNQ.md)
+* [Golang 互斥锁(Mutex)杂谈之Treap](./Go%20TREAP.md)

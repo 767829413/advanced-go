@@ -184,123 +184,144 @@ Treap 维护堆性质的方法用到了旋转, 且只需要进行两种旋转操
 
 ```go
 type semaRoot struct {
- lock  mutex
- treap *sudog        // 不重复的等待者(goroutine)的平衡树(treap)的根节点
- nwait atomic.Uint32 // 等待者(goroutine)的数量
+	lock  mutex
+	treap *sudog        // 不重复的等待者(goroutine)的平衡树(treap)的根节点
+	nwait atomic.Uint32 // 等待者(goroutine)的数量
 }
 
 type sudog struct {
- g *g
+	// The following fields are protected by the hchan.lock of the
+	// channel this sudog is blocking on. shrinkstack depends on
+	// this for sudogs involved in channel ops.
 
- next *sudog
- prev *sudog
- elem unsafe.Pointer // data element (may point to stack)
+	g *g
 
- acquiretime int64
- releasetime int64
- ticket      uint32
+	next *sudog
+	prev *sudog
+	elem unsafe.Pointer // data element (may point to stack)
 
- isSelect bool
- success bool
+	// The following fields are never accessed concurrently.
+	// For channels, waitlink is only accessed by g.
+	// For semaphores, all fields (including the ones above)
+	// are only accessed when holding a semaRoot lock.
 
- waiters uint16
+	acquiretime int64
+	releasetime int64
+	ticket      uint32
 
- parent   *sudog // semaRoot binary tree
- waitlink *sudog // g.waiting list or semaRoot
- waittail *sudog // semaRoot
- c        *hchan // channel
+	// isSelect indicates g is participating in a select, so
+	// g.selectDone must be CAS'd to win the wake-up race.
+	isSelect bool
+
+	// success indicates whether communication over channel c
+	// succeeded. It is true if the goroutine was awoken because a
+	// value was delivered over channel c, and false if awoken
+	// because c was closed.
+	success bool
+
+	// waiters is a count of semaRoot waiting list other than head of list,
+	// clamped to a uint16 to fit in unused space.
+	// Only meaningful at the head of the list.
+	// (If we wanted to be overly clever, we could store a high 16 bits
+	// in the second entry in the list.)
+	waiters uint16
+
+	parent   *sudog // semaRoot binary tree
+	waitlink *sudog // g.waiting list or semaRoot
+	waittail *sudog // semaRoot
+	c        *hchan // channel
 }
 ```
 
-这是 Go 语言互斥锁(Mutex)底层实现中的关键数据结构, 用于管理等待获取互斥锁的 goroutine 队列. 我们已经知道, 在获取 `sync.Mutex` 时, 如果锁已经被其它 goroutine 获取, 那么当前请求锁的 goroutine 会被 block 住, 就会被放入到这样一个数据结构中 (所以你也知道这个数据结构中的 goroutine 都是唯一的, 不重复). 
+这是 `Go` 语言互斥锁(Mutex)底层实现中的关键数据结构, 用于管理等待获取互斥锁的 `goroutine` 队列. 我们已经知道, 在获取 `sync.Mutex` 时, 如果锁已经被其它 `goroutine` 获取, 那么当前请求锁的 `goroutine` 会被 `block` 住, 就会被放入到这样一个数据结构中 (所以你也知道这个数据结构中的 `goroutine` 都是唯一的, 不重复). 
 
-`semaRoot` 保存了一个平衡树, 树中的 `sudog` 节点都有不同的地址 `(s.elem)` ,每个 `sudog` 可能通过 `s.waitlink` 指向一个链表, 该链表包含等待相同地址的其他 `sudog`. 对具有相同地址的 `sudog` 内部链表的操作时间复杂度都是 O(1).. 扫描顶层 semaRoot 列表的时间复杂度是 `O(log n)`,其中 `n` 是具有被阻塞 goroutine 的不同地址的数量 (这些地址会散列到给定的 semaRoot) . 
+`semaRoot` 保存了一个平衡树, 树中的 `sudog` 节点都有不同的地址 `(s.elem)` ,每个 `sudog` 可能通过 `s.waitlink` 指向一个链表, 该链表包含等待相同地址的其他 `sudog`. 对具有相同地址的 `sudog` 内部链表的操作时间复杂度都是 `O(1)`. 扫描顶层 `semaRoot` 列表的时间复杂度是 `O(log n)`,其中 `n` 是具有被阻塞 `goroutine` 的不同地址的数量 (这些地址会散列到给定的 `semaRoot`) . 
 
 `semaRoot` 的 `Treap *sudog` 其实就是一个 `Treap`, 我们来看看它的实现. 
 
 ## 增加一个元素 (入队) 
 -----------------
 
-增加一个等待的 goroutine(`sudog`)到 `semaRoot` 的 `Treap` 中, 如果 `lifo` 为 `true`, 则将 `s` 替换到 `t` 的位置, 否则将 `s` 添加到 `t` 的等待列表的末尾. 
+增加一个等待的 goroutine(`sudog`) 到 `semaRoot` 的 `Treap` 中, 如果 `lifo` 为 `true`, 则将 `s` 替换到 `t` 的位置, 否则将 `s` 添加到 `t` 的等待列表的末尾. 
 
 ```go
 func (root *semaRoot) queue(addr *uint32, s *sudog, lifo bool) {
- // 设置这个要加入的节点
- s.g = getg()
- s.elem = unsafe.Pointer(addr)
- s.next = nil
- s.prev = nil
- s.waiters = 0
+   // 设置这个要加入的节点
+	s.g = getg()
+	s.elem = unsafe.Pointer(addr)
+	s.next = nil
+	s.prev = nil
+	s.waiters = 0
 
- var last *sudog
- pt := &root.treap
- // 从根节点开始
- for t := *pt; t != nil; t = *pt { // ①
-  // 如果地址已经在列表中,则加入到这个地址的链表中
-  if t.elem == unsafe.Pointer(addr) {
-   // 如果地址已经在列表中，并且指定了先入后出flag,这是一个替换操作
-   if lifo {
-    // 替换操作
-    *pt = s
-    s.ticket = t.ticket
-    ... // 把t的各种信息复制给s
-   } else {
-    // 增加到到等待列表的末尾
-    if t.waittail == nil {
-     t.waitlink = s
-    } else {
-     t.waittail.waitlink = s
-    }
-    t.waittail = s
-    s.waitlink = nil
-    if t.waiters+1 != 0 {
-     t.waiters++
-    }
-   }
-   return
-  }
-  last = t
-  // 二叉搜索树查找
-  if uintptr(unsafe.Pointer(addr)) < uintptr(t.elem) { // ②
-   pt = &t.prev
-  } else {
-   pt = &t.next
-  }
- }
+	var last *sudog
+	pt := &root.treap
+   // 从根节点开始
+	for t := *pt; t != nil; t = *pt { // ①
+      // 如果地址已经在列表中,则加入到这个地址的链表中
+		if t.elem == unsafe.Pointer(addr) {
+			// 如果地址已经在列表中，并且指定了先入后出flag,这是一个替换操作
+			if lifo {
+				// 替换操作
+				*pt = s
+				s.ticket = t.ticket
+            ... // 把t的各种信息复制给s
+			} else {
+				// 增加到到等待列表的末尾
+				if t.waittail == nil {
+					t.waitlink = s
+				} else {
+					t.waittail.waitlink = s
+				}
+				t.waittail = s
+				s.waitlink = nil
+				if t.waiters+1 != 0 {
+					t.waiters++
+				}
+			}
+			return
+		}
+		last = t
+      // 二叉搜索树查找
+		if uintptr(unsafe.Pointer(addr)) < uintptr(t.elem) { // ②
+			pt = &t.prev
+		} else {
+			pt = &t.next
+		}
+	}
 
- // 为新节点设置ticket.这个ticket是一个随机值，作为随机堆的优先级，用于保持treap的平衡。
- s.ticket = cheaprand() | 1 // ③
- s.parent = last
- *pt = s
+	// 为新节点设置ticket.这个ticket是一个随机值，作为随机堆的优先级，用于保持treap的平衡。
+	s.ticket = cheaprand() | 1 // ③
+	s.parent = last
+	*pt = s
 
- // 根据优先级(ticket)旋转以保持treap的平衡
- for s.parent != nil && s.parent.ticket > s.ticket { // ④
-  if s.parent.prev == s {
-   root.rotateRight(s.parent) // ⑤
-  } else {
-   if s.parent.next != s {
-    panic("semaRoot queue")
-   }
-   root.rotateLeft(s.parent) // ⑥
-  }
- }
+	// 根据优先级(ticket)旋转以保持treap的平衡
+	for s.parent != nil && s.parent.ticket > s.ticket { // ④
+		if s.parent.prev == s {
+			root.rotateRight(s.parent) // ⑤
+		} else {
+			if s.parent.next != s {
+				panic("semaRoot queue")
+			}
+			root.rotateLeft(s.parent) // ⑥
+		}
+	}
 }
 ```
 
-① 是遍历 `Treap` 的过程, 当然它是通过搜索二叉树的方式实现. `addr`就是我们一开始讲的 `Treap` 的 key, 也就是 `s.elem`. 首先检查 `addr` 已经在 `Treap` 中, 如果存在, 那么就把 `s` 加入到 `addr` 对应的 `sudog` 链表中, 或者替换掉 `addr` 对应的 `sudog`. 
+① 是遍历 `Treap` 的过程, 当然它是通过搜索二叉树的方式实现. `addr` 就是我们一开始讲的 `Treap` 的 `key`, 也就是 `s.elem`. 首先检查 `addr` 已经在 `Treap` 中, 如果存在, 那么就把 `s` 加入到 `addr` 对应的 `sudog` 链表中, 或者替换掉 `addr` 对应的 `sudog`. 
 
-这个`addr`, 如果对于`sync.Mutex`来说, 就是 `Mutex.sema`字段的地址. 
+这个 `addr`, 如果对于 `sync.Mutex` 来说, 就是 `Mutex.sema` 字段的地址. 
 
 ```go
 type Mutex struct {
- state int32
- sema  uint32
+	state int32
+	sema  uint32
 }
 ```
 
-所以对于阻塞在同一个`sync.Mutex`上的 goroutine, 他们的`addr`是相同的, 所以他们会被加入到同一个`sudog`链表中. 如果是不同的`sync.Mutex`锁, 他们的`addr`是不同的, 那么他们会被加入到这个 `Treap` 不同的节点. 
+所以对于阻塞在同一个`sync.Mutex`上的 `goroutine`, 他们的 `addr` 是相同的, 所以他们会被加入到同一个`sudog` 链表中. 如果是不同的 `sync.Mutex` 锁, 他们的 `addr` 是不同的, 那么他们会被加入到这个 `Treap` 不同的节点. 
 
-进而, 你可以知道, 这个`rootSema`是维护多个`sync.Mutex`的等待队列的, 可以快速找到不同的`sync.Mutex`的等待队列,也可以维护同一个`sync.Mutex`的等待队列. 这给了我们启发, 如果你有类似的需求, 可以参考这个实现. 
+进而, 你可以知道, 这个 `rootSema` 是维护多个 `sync.Mutex` 的等待队列的, 可以快速找到不同的 `sync.Mutex` 的等待队列,也可以维护同一个 `sync.Mutex` 的等待队列. 这给了我们启发, 如果你有类似的需求, 可以参考这个实现. 
 
 ③ 就是设置这个节点的优先级, 它是一个随机值, 用于保持 `Treap` 的平衡. 这里有个技巧就是总是把优先级最低位设置为 1, 这样保证优先级不为 0.因为优先级经常和 0 做比较, 我们将最低位设置为 1, 就表明优先级已经设置. 
 
@@ -315,55 +336,59 @@ type Mutex struct {
 
 ```go
 func (root *semaRoot) dequeue(addr *uint32) (found *sudog, now, tailtime int64) {
- ps := &root.treap
- s := *ps
- for ; s != nil; s = *ps { // ①， 二叉搜索树查找
-  if s.elem == unsafe.Pointer(addr) { // ②
-   goto Found
-  }
-  if uintptr(unsafe.Pointer(addr)) < uintptr(s.elem) {
-   ps = &s.prev
-  } else {
-   ps = &s.next
-  }
- }
- return nil, 0, 0
+	ps := &root.treap
+	s := *ps
+	for ; s != nil; s = *ps { // ①， 二叉搜索树查找
+		if s.elem == unsafe.Pointer(addr) { // ②
+			goto Found
+		}
+		if uintptr(unsafe.Pointer(addr)) < uintptr(s.elem) {
+			ps = &s.prev
+		} else {
+			ps = &s.next
+		}
+	}
+	return nil, 0, 0
 
 Found: // ③
- ...
- if t := s.waitlink; t != nil { // ④
-  *ps = t
-  ...
- } else { // ⑤
-  // 旋转s到叶节点，以便删除
-  for s.next != nil || s.prev != nil {
-   if s.next == nil || s.prev != nil && s.prev.ticket < s.next.ticket {
-    root.rotateRight(s)
-   } else {
-    root.rotateLeft(s)
-   }
-  }
-
-  // ⑤ 删除s
-  if s.parent != nil {
-   if s.parent.prev == s {
-    s.parent.prev = nil
-   } else {
-    s.parent.next = nil
-   }
-  } else {
-   root.treap = nil
-  }
-  tailtime = s.acquiretime
- }
- ... // 清理s的不需要的信息
- return s, now, tailtime
+	now = int64(0)
+	if s.acquiretime != 0 {
+		now = cputicks()
+	}
+	if t := s.waitlink; t != nil { // ④
+		// Substitute t, also waiting on addr, for s in root tree of unique addrs.
+		*ps = t
+		t.ticket = s.ticket
+      ... // 赋值
+	} else { // ⑤
+		// 旋转s到叶节点，以便删除
+		for s.next != nil || s.prev != nil {
+			if s.next == nil || s.prev != nil && s.prev.ticket < s.next.ticket {
+				root.rotateRight(s)
+			} else {
+				root.rotateLeft(s)
+			}
+		}
+		// Remove s, now a leaf.
+		if s.parent != nil {
+			if s.parent.prev == s {
+				s.parent.prev = nil
+			} else {
+				s.parent.next = nil
+			}
+		} else {
+			root.treap = nil
+		}
+		tailtime = s.acquiretime
+	}
+	... // 清理s的不需要的信息
+	return s, now, tailtime
 }
 ```
 
-① 是遍历 `Treap` 的过程, 当然它是通过搜索二叉树的方式实现. `addr`就是我们一开始讲的 `Treap` 的 key, 也就是 `s.elem`. 如果找到了, 就跳到 `Found` 标签. 如果没有找到, 就返回 `nil`. 
+① 是遍历 `Treap` 的过程, 当然它是通过搜索二叉树的方式实现. `addr` 就是我们一开始讲的 `Treap` 的 `key`, 也就是 `s.elem`. 如果找到了, 就跳到 `Found` 标签. 如果没有找到, 就返回 `nil`. 
 
-④ 是检查这个地址上是不是有多个等待的 goroutine, 如果有, 就把这个节点替换成链表中的下一个节点. 把这个节点从 `Treap` 中移除并返回. 如果就一个 goroutine, 那么把这个移除掉后, 需要旋转 `Treap`, 直到这个节点被旋转到叶节点, 然后删除这个节点. 
+④ 是检查这个地址上是不是有多个等待的 `goroutine`, 如果有, 就把这个节点替换成链表中的下一个节点. 把这个节点从 `Treap` 中移除并返回. 如果就一个 `goroutine`, 那么把这个移除掉后, 需要旋转 `Treap`, 直到这个节点被旋转到叶节点, 然后删除这个节点. 
 
 这里的旋转操作就是上面提到的左旋和右旋. 
 
@@ -373,30 +398,32 @@ Found: // ③
 `rotateLeft` 函数将以 `x` 为根的子树左旋, 使其变为 `y` 为根的子树. 左旋之前的结构为 `(x a (y b c))`, 旋转后变为 `(y (x a b) c)`. 
 
 ```go
+// rotateLeft rotates the tree rooted at node x.
+// turning (x a (y b c)) into (y (x a b) c).
 func (root *semaRoot) rotateLeft(x *sudog) {
- // p -> (x a (y b c))
- p := x.parent
- y := x.next
- b := y.prev
+	// p -> (x a (y b c))
+	p := x.parent
+	y := x.next
+	b := y.prev
 
- y.prev = x // ①
- x.parent = y // ②
- x.next = b // ③
- if b != nil {
-  b.parent = x // ④
- }
+	y.prev = x // ①
+	x.parent = y // ②
+	x.next = b // ③
+	if b != nil {
+		b.parent = x // ④
+	}
 
- y.parent = p // ⑤
- if p == nil {
-  root.treap = y // ⑥
- } else if p.prev == x { // ⑦
-  p.prev = y
- } else {
-  if p.next != x {
-   throw("semaRoot rotateLeft")
-  }
-  p.next = y
- }
+	y.parent = p // ⑤
+	if p == nil {
+		root.treap = y // ⑥
+	} else if p.prev == x { // ⑦
+		p.prev = y
+	} else {
+		if p.next != x {
+			throw("semaRoot rotateLeft")
+		}
+		p.next = y
+	}
 }
 ```
 
@@ -406,18 +433,18 @@ func (root *semaRoot) rotateLeft(x *sudog) {
     
 * 将 `b` 设为 `x` 的右子节点(③), 并更新其父节点为 `x`(④). 
     
-* 更新 `y` 的父节点为 `p`(⑤), 即 `x` 的原父节点. 如果 `p` 为 nil, 则 y 成为新的树根(⑥). 
+* 更新 `y` 的父节点为 `p`(⑤), 即 `x` 的原父节点. 如果 `p` 为 nil, 则 `y` 成为新的树根(⑥). 
     
 * 根据 `y` 是 `p` 的左子节点还是右子节点, 更新对应的指针(⑦). 
     
- 左旋为
+左旋为图示具体如下:
 
 ```bash
-    A            B
+    x            y
    / \          / \
-  T1  B   =>   A  T3
+  a   y   =>   x   c
      / \      / \
-    T2 T3    T1 T2
+     b  c    a   b
 ```
 
 ## 右旋 rotateRight
@@ -427,63 +454,63 @@ rotateRight 旋转以节点 y 为根的树. 将 `(y (x a b) c)` 变为 `(x a (y 
 
 ```go
 func (root *semaRoot) rotateRight(y *sudog) {
- // p -> (y (x a b) c)
- p := y.parent
- x := y.prev
- b := x.next
+	// p -> (y (x a b) c)
+	p := y.parent
+	x := y.prev
+	b := x.next
 
- x.next = y // ①
- y.parent = x // ②
- y.prev = b // ③
- if b != nil {
-  b.parent = y // ④
- }
+	x.next = y // ①
+	y.parent = x // ②
+	y.prev = b // ③
+	if b != nil {
+		b.parent = y // ④
+	}
 
- x.parent = p // ⑤
- if p == nil {
-  root.treap = x // ⑥
- } else if p.prev == y { // ⑦
-  p.prev = x
- } else {
-  if p.next != y {
-   throw("semaRoot rotateRight")
-  }
-  p.next = x
- }
+	x.parent = p // ⑤
+	if p == nil {
+		root.treap = x // ⑥
+	} else if p.prev == y { // ⑦
+		p.prev = x
+	} else {
+		if p.next != y {
+			throw("semaRoot rotateRight")
+		}
+		p.next = x
+	}
 }
 ```
 
 具体步骤：
 
-* 将 y 设为 x 的右子节点(①), x 设为 y 的父节点(②)
+* 将 `y` 设为 `x` 的右子节点(①), `x` 设为 `y` 的父节点(②)
     
-* 将 b 设为 y 的左子节点(③), 并更新其父节点为 y(④)
+* 将 `b` 设为 `y` 的左子节点(③), 并更新其父节点为 `y`(④)
     
-* 更新 x 的父节点为 p(⑤), 即 y 的原父节点. 如果 p 为 nil, 则 x 成为新的树根(⑥)
+* 更新 `x` 的父节点为 `p`(⑤), 即 `y` 的原父节点. 如果 `p` 为 nil, 则 `x` 成为新的树根(⑥)
     
-* 根据 x 是 p 的左子节点还是右子节点, 更新对应的指针(⑦)
+* 根据 `x` 是 `p` 的左子节点还是右子节点, 更新对应的指针(⑦)
     
- 右旋为 
+右旋为图示具体如下:
 
 ```bash
-      B        A
+      y        x
      / \      / \
-    A  T3 => T1  B
+    x   c => a   y
    / \          / \
-  T1 T2        T2 T3
+  a   b        b   c
 ```
 
 理解了左旋和右旋, 你就理解了出队代码中这一段为什么把当前节点旋转到叶结点中了：
 
 ```go
-  // 旋转s到叶节点，以便删除
-  for s.next != nil || s.prev != nil {
-   if s.next == nil || s.prev != nil && s.prev.ticket < s.next.ticket {
-    root.rotateRight(s)
-   } else {
-    root.rotateLeft(s)
-   }
-  }
+		// 旋转s到叶节点，以便删除
+		for s.next != nil || s.prev != nil {
+			if s.next == nil || s.prev != nil && s.prev.ticket < s.next.ticket {
+				root.rotateRight(s)
+			} else {
+				root.rotateLeft(s)
+			}
+		}
 ```
 
 整体上看, `Treap` 这个数据结构确实简单可维护. 左旋和右旋的代码量很少, 结合图看起来也容易理解. 出入队的代码也很简单, 只是简单的二叉搜索树的操作, 加上旋转操作. 

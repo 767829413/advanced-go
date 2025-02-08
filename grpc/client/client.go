@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/767829413/tmp-exec/api/liveclass"
-	fixdiscovery "github.com/767829413/tmp-exec/grpc/fixDiscovery"
+	"github.com/767829413/advanced-go/api/orgSet"
+	fixdiscovery "github.com/767829413/advanced-go/grpc/fixDiscovery"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
@@ -31,22 +31,17 @@ var (
 func main() {
 	fixdiscovery.InitInternalRpcClientNew(livecSrv, livecSrvAddr)
 	conn := GetLiveclassRpcClient()
-	req := &liveclass.LiveClassRelatedGroupRequest{}
-	req.RelatedGroupId = 103
-	resp, err := conn.LiveClassRelatedGroup(context.Background(), req)
+	req := &orgSet.GetOrgConfRequest{}
+	resp, err := conn.GetOrgConf(context.Background(), req)
 	if err != nil {
 		log.Error("error: ", err)
 		return
 	}
-	for _, g := range resp.RelatedLiveClass {
-		log.Info(g)
-	}
-
+	log.Info(resp)
 }
 
-func GetLiveclassRpcClient() liveclass.LiveClassClient {
-	client := liveclass.NewLiveClassClient(fixdiscovery.GetConnectionNew())
-	return client
+func GetLiveclassRpcClient() orgSet.OrgConfClient {
+	return orgSet.NewOrgConfClient(fixdiscovery.GetConnectionNew())
 }
 
 func InitInternalRpcClientNew() {

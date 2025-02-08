@@ -1,6 +1,4 @@
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/767829413/tmp-exec v0.0.0-20231219093537-2f427def6e46 h1:MJzmoEzy4v9XgbsE3PF/k/op6K2FGpO6zZRxopTw3u8=
-github.com/767829413/tmp-exec v0.0.0-20231219093537-2f427def6e46/go.mod h1:pbW/Rdz1nxpYZ1MxnUeEkR6bjbVvwe7y+Kb8Nxk1QLY=
 github.com/ajg/form v1.5.1 h1:t9c7v8JUKu/XxOGBU0yjNpaMloxGEJhUkqFRq0ibGeU=
 github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=

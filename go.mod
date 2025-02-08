@@ -5,7 +5,6 @@ go 1.23
 toolchain go1.23.3
 
 require (
-	github.com/767829413/tmp-exec v0.0.0-20231219093537-2f427def6e46
 	github.com/chromedp/cdproto v0.0.0-20241110205750-a72e6703cd9b
 	github.com/chromedp/chromedp v0.9.5
 	github.com/cilium/ebpf v0.16.0
